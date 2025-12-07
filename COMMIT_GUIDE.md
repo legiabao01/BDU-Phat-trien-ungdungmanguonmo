@@ -26,33 +26,59 @@
    - Kéo thả thư mục vào cửa sổ PowerShell
    - PowerShell sẽ tự động chuyển vào thư mục đó
 
-2. **Khởi tạo Git (nếu chưa có):**
+2. **Cấu hình Git Identity (QUAN TRỌNG - Phải làm trước khi commit):**
+   
+   **Cấu hình toàn cục (cho tất cả repositories):**
+   ```bash
+   git config --global user.name "Tên của bạn"
+   git config --global user.email "email@example.com"
+   ```
+   
+   **Hoặc chỉ cho repository này:**
+   ```bash
+   git config user.name "Tên của bạn"
+   git config user.email "email@example.com"
+   ```
+   
+   **Ví dụ:**
+   ```bash
+   git config --global user.name "Bao"
+   git config --global user.email "bao@example.com"
+   ```
+   
+   **Kiểm tra cấu hình:**
+   ```bash
+   git config --global user.name
+   git config --global user.email
+   ```
+
+3. **Khởi tạo Git (nếu chưa có):**
    ```bash
    git init
    ```
 
-3. **Thêm remote repository:**
+4. **Thêm remote repository:**
    ```bash
    git remote add origin https://github.com/hangtr29/Web-vnl.git
    ```
    (Nếu đã có remote, cập nhật bằng: `git remote set-url origin https://github.com/hangtr29/Web-vnl.git`)
 
-4. **Thêm tất cả file vào staging:**
+5. **Thêm tất cả file vào staging:**
    ```bash
    git add .
    ```
 
-5. **Commit:**
+6. **Commit:**
    ```bash
    git commit -m "Add Webhoctructuyen project"
    ```
 
-6. **Đặt tên branch (nếu cần):**
+7. **Đặt tên branch (nếu cần):**
    ```bash
    git branch -M main
    ```
 
-7. **Push lên GitHub:**
+8. **Push lên GitHub:**
    ```bash
    git push -u origin main
    ```
@@ -76,7 +102,37 @@ cd "D:\Nhóm 6_Webhoctructuyen\Webhoctructuyen"
 - Kéo thả thư mục vào PowerShell
 - Chạy: `.\commit_to_github.ps1` hoặc `.\commit_to_github.bat`
 
+### Xử lý lỗi thường gặp:
+
+**Lỗi: "src refspec main does not match any"**
+- Nguyên nhân: Chưa có commit nào hoặc branch hiện tại không phải `main`
+- Giải pháp:
+  ```bash
+  # Kiểm tra branch hiện tại
+  git branch
+  
+  # Kiểm tra xem đã có commit chưa
+  git log
+  
+  # Nếu chưa có commit, commit lại:
+  git add .
+  git commit -m "Add Webhoctructuyen project"
+  
+  # Đổi tên branch thành main (nếu đang ở master hoặc branch khác)
+  git branch -M main
+  
+  # Sau đó push lại
+  git push -u origin main
+  ```
+
+**Lỗi: "failed to push some refs"**
+- Nếu repository trên GitHub đã có code, cần pull trước:
+  ```bash
+  git pull origin main --allow-unrelated-histories
+  git push -u origin main
+  ```
+
 ### Lưu ý:
 - Nếu chưa đăng nhập GitHub, bạn sẽ cần Personal Access Token
-- Nếu repository đã có code, có thể cần pull trước: `git pull origin main --allow-unrelated-histories`
+- Luôn kiểm tra `git status` để xem trạng thái hiện tại
 
