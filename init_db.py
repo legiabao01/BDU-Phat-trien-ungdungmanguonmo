@@ -46,6 +46,76 @@ def init_database():
             database=os.getenv('MYSQL_DB', 'webhoctructuyen')
         )
         cursor = conn.cursor(dictionary=True)
+
+        # Đảm bảo bảng thảo luận tồn tại
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS thao_luan (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                khoa_hoc_id INT NOT NULL,
+                user_id INT NOT NULL,
+                noi_dung TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (khoa_hoc_id) REFERENCES khoa_hoc(id) ON DELETE CASCADE,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+            """
+        )
+
+        # Đảm bảo cột is_required cho bai_tap
+        try:
+            cursor.execute("ALTER TABLE bai_tap ADD COLUMN is_required TINYINT(1) DEFAULT 0;")
+        except Error as e:
+            if "Duplicate column" not in str(e):
+                print(f"Warning: {e}")
+
+        # Đảm bảo bảng payments
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS payments (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                khoa_hoc_id INT NOT NULL,
+                amount DECIMAL(12,2) NOT NULL,
+                provider VARCHAR(50) DEFAULT 'sandbox',
+                status ENUM('pending','paid','failed') DEFAULT 'paid',
+                txn_ref VARCHAR(100),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (khoa_hoc_id) REFERENCES khoa_hoc(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+            """
+        )
+
+        # Đảm bảo bảng điểm danh
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS diem_danh (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                lich_hoc_id INT NOT NULL,
+                user_id INT NOT NULL,
+                status ENUM('present','absent','late') DEFAULT 'present',
+                noted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (lich_hoc_id) REFERENCES lich_hoc(id) ON DELETE CASCADE,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+            """
+        )
+
+        # Đảm bảo bảng certificates
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS certificates (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                khoa_hoc_id INT NOT NULL,
+                code VARCHAR(50) UNIQUE,
+                issued_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (khoa_hoc_id) REFERENCES khoa_hoc(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+            """
+        )
         
         # ---------- Users ----------
         def ensure_user(name, email, password, role):
@@ -188,19 +258,19 @@ def init_database():
                 cid = course_map["Lập trình Python cơ bản"]
                 assigns.extend(
                     [
-                        (cid, "Bài tập 1: Cú pháp Python", "Làm quen biến, vòng lặp.", "Viết 5 bài nhỏ", None),
-                        (cid, "Bài tập 2: OOP", "Thiết kế class đơn giản.", "Xây dựng class Student/Course", None),
+                        (cid, "Bài tập 1: Cú pháp Python", "Làm quen biến, vòng lặp.", "Viết 5 bài nhỏ", None, 1),
+                        (cid, "Bài tập 2: OOP", "Thiết kế class đơn giản.", "Xây dựng class Student/Course", None, 1),
                     ]
                 )
             if "Lập trình Web với Flask" in course_map:
                 cid = course_map["Lập trình Web với Flask"]
                 assigns.append(
-                    (cid, "Bài tập Flask CRUD", "Tạo CRUD cho bài viết", "Dùng form + MySQL", None)
+                    (cid, "Bài tập Flask CRUD", "Tạo CRUD cho bài viết", "Dùng form + MySQL", None, 1)
                 )
             cursor.executemany(
                 """
-                INSERT INTO bai_tap (khoa_hoc_id, tieu_de, mo_ta, noi_dung, han_nop)
-                VALUES (%s,%s,%s,%s,%s)
+                INSERT INTO bai_tap (khoa_hoc_id, tieu_de, mo_ta, noi_dung, han_nop, is_required)
+                VALUES (%s,%s,%s,%s,%s,%s)
                 """,
                 assigns,
             )
@@ -225,6 +295,67 @@ def init_database():
                 noti,
             )
             conn.commit()
+
+        # ---------- Discussions ----------
+        cursor.execute("SELECT COUNT(*) AS total FROM thao_luan")
+        if cursor.fetchone()["total"] == 0 and course_rows:
+            discussions = []
+            if "Lập trình Web với Flask" in course_map:
+                discussions.append(
+                    (
+                        course_map["Lập trình Web với Flask"],
+                        student_id,
+                        "Khóa này có bài tập deploy lên đâu vậy ạ?",
+                    )
+                )
+                discussions.append(
+                    (
+                        course_map["Lập trình Web với Flask"],
+                        teacher_id,
+                        "Bạn có thể deploy lên Render/Heroku hoặc server riêng. Có hướng dẫn trong tuần 4.",
+                    )
+                )
+            if discussions:
+                cursor.executemany(
+                    """
+                    INSERT INTO thao_luan (khoa_hoc_id, user_id, noi_dung)
+                    VALUES (%s,%s,%s)
+                    """,
+                    discussions,
+                )
+                conn.commit()
+
+        # ---------- Lịch học mẫu ----------
+        cursor.execute("SELECT COUNT(*) AS total FROM lich_hoc")
+        if cursor.fetchone()["total"] == 0 and course_rows:
+            schedules = []
+            for title, date_str in [
+                ("Lập trình Python cơ bản", "2025-01-10"),
+                ("Lập trình Python cơ bản", "2025-01-17"),
+                ("Lập trình Web với Flask", "2025-01-12"),
+                ("Lập trình Web với Flask", "2025-01-19"),
+            ]:
+                if title in course_map:
+                    schedules.append(
+                        (
+                            course_map[title],
+                            date_str,
+                            "19:00:00",
+                            "21:00:00",
+                            "Phòng Zoom",
+                            "https://zoom.example.com/demo",
+                            "Buổi học trực tuyến",
+                        )
+                    )
+            if schedules:
+                cursor.executemany(
+                    """
+                    INSERT INTO lich_hoc (khoa_hoc_id, ngay_hoc, gio_bat_dau, gio_ket_thuc, phong, link_zoom, ghi_chu)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s)
+                    """,
+                    schedules,
+                )
+                conn.commit()
 
         print("✅ Database đã được khởi tạo và nạp dữ liệu mẫu!")
         print("\nTài khoản mặc định:")

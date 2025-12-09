@@ -84,6 +84,7 @@ CREATE TABLE IF NOT EXISTS bai_tap (
     mo_ta TEXT,
     noi_dung TEXT,
     han_nop DATETIME,
+    is_required TINYINT(1) DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (khoa_hoc_id) REFERENCES khoa_hoc(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -127,6 +128,54 @@ CREATE TABLE IF NOT EXISTS thong_bao (
     khoa_hoc_id INT,
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (khoa_hoc_id) REFERENCES khoa_hoc(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Bảng Thao Luận (Q&A khóa học)
+CREATE TABLE IF NOT EXISTS thao_luan (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    khoa_hoc_id INT NOT NULL,
+    user_id INT NOT NULL,
+    noi_dung TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (khoa_hoc_id) REFERENCES khoa_hoc(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Bảng Thanh toán
+CREATE TABLE IF NOT EXISTS payments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    khoa_hoc_id INT NOT NULL,
+    amount DECIMAL(12,2) NOT NULL,
+    provider VARCHAR(50) DEFAULT 'sandbox',
+    status ENUM('pending','paid','failed') DEFAULT 'paid',
+    txn_ref VARCHAR(100),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (khoa_hoc_id) REFERENCES khoa_hoc(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Bảng Điểm danh
+CREATE TABLE IF NOT EXISTS diem_danh (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    lich_hoc_id INT NOT NULL,
+    user_id INT NOT NULL,
+    status ENUM('present','absent','late') DEFAULT 'present',
+    noted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uniq_attend (lich_hoc_id, user_id),
+    FOREIGN KEY (lich_hoc_id) REFERENCES lich_hoc(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Bảng Chứng nhận
+CREATE TABLE IF NOT EXISTS certificates (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    khoa_hoc_id INT NOT NULL,
+    code VARCHAR(50) UNIQUE,
+    issued_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (khoa_hoc_id) REFERENCES khoa_hoc(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

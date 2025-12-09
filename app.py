@@ -8,6 +8,9 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 import os
 from datetime import datetime
+from flask import g
+import random
+import string
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
@@ -20,6 +23,122 @@ app.config['MYSQL_DB'] = os.getenv('MYSQL_DB', 'webhoctructuyen')
 app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
 
 mysql = MySQL(app)
+
+
+def ensure_discussion_table(cur):
+    """Đảm bảo bảng thảo luận tồn tại trước khi dùng."""
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS thao_luan (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            khoa_hoc_id INT NOT NULL,
+            user_id INT NOT NULL,
+            noi_dung TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (khoa_hoc_id) REFERENCES khoa_hoc(id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        """
+    )
+
+
+def ensure_extended_tables(cur):
+    """Đảm bảo các bảng cho thanh toán, điểm danh, chứng nhận tồn tại."""
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS payments (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            khoa_hoc_id INT NOT NULL,
+            amount DECIMAL(12,2) NOT NULL,
+            provider VARCHAR(50) DEFAULT 'sandbox',
+            status ENUM('pending','paid','failed') DEFAULT 'paid',
+            txn_ref VARCHAR(100),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (khoa_hoc_id) REFERENCES khoa_hoc(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        """
+    )
+
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS diem_danh (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            lich_hoc_id INT NOT NULL,
+            user_id INT NOT NULL,
+            status ENUM('present','absent','late') DEFAULT 'present',
+            noted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uniq_attend (lich_hoc_id, user_id),
+            FOREIGN KEY (lich_hoc_id) REFERENCES lich_hoc(id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        """
+    )
+
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS certificates (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            khoa_hoc_id INT NOT NULL,
+            code VARCHAR(50) UNIQUE,
+            issued_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (khoa_hoc_id) REFERENCES khoa_hoc(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        """
+    )
+
+
+def generate_code(prefix="CERT"):
+    return f"{prefix}-{''.join(random.choices(string.ascii_uppercase + string.digits, k=8))}"
+
+
+def compute_progress(cur, course_id, user_id):
+    """Tính tiến độ học viên cho khóa học."""
+    cur.execute("SELECT COUNT(*) AS total FROM lich_hoc WHERE khoa_hoc_id=%s", (course_id,))
+    total_sessions = cur.fetchone()["total"]
+    cur.execute(
+        """
+        SELECT COUNT(*) AS present_count
+        FROM diem_danh dd
+        JOIN lich_hoc lh ON dd.lich_hoc_id = lh.id
+        WHERE lh.khoa_hoc_id=%s AND dd.user_id=%s AND dd.status IN ('present','late')
+        """,
+        (course_id, user_id),
+    )
+    present_count = cur.fetchone()["present_count"]
+
+    attendance_ratio = present_count / total_sessions if total_sessions else 1
+
+    cur.execute("SELECT COUNT(*) AS total_req FROM bai_tap WHERE khoa_hoc_id=%s AND is_required=1", (course_id,))
+    total_req = cur.fetchone()["total_req"]
+    cur.execute(
+        """
+        SELECT COUNT(*) AS submitted_req
+        FROM bai_tap bt
+        JOIN nop_bai nb ON nb.bai_tap_id = bt.id
+        WHERE bt.khoa_hoc_id=%s AND bt.is_required=1 AND nb.user_id=%s
+        """,
+        (course_id, user_id),
+    )
+    submitted_req = cur.fetchone()["submitted_req"]
+    assignment_ratio = submitted_req / total_req if total_req else 1
+
+    progress_ratio = (attendance_ratio + assignment_ratio) / 2 if (total_sessions or total_req) else 1
+    completed = attendance_ratio >= 0.7 and (total_req == 0 or submitted_req == total_req)
+
+    return {
+        "attendance_ratio": attendance_ratio,
+        "assignment_ratio": assignment_ratio,
+        "progress_ratio": progress_ratio,
+        "completed": completed,
+        "total_sessions": total_sessions,
+        "present_count": present_count,
+        "total_required_assign": total_req,
+        "submitted_required_assign": submitted_req,
+    }
 
 # ==================== DECORATORS ====================
 def login_required(f):
@@ -136,6 +255,7 @@ def courses():
 def course_detail(course_id):
     """Chi tiết khóa học"""
     cur = mysql.connection.cursor()
+    ensure_discussion_table(cur)
     
     # Lấy thông tin khóa học
     cur.execute("SELECT * FROM khoa_hoc WHERE id = %s", (course_id,))
@@ -163,9 +283,23 @@ def course_detail(course_id):
         LIMIT 10
     """, (course_id,))
     reviews = cur.fetchall()
-    
+
+    # Lấy thảo luận
+    cur.execute(
+        """
+        SELECT tl.*, u.ho_ten
+        FROM thao_luan tl
+        JOIN users u ON tl.user_id = u.id
+        WHERE tl.khoa_hoc_id = %s
+        ORDER BY tl.created_at DESC
+        LIMIT 30
+        """,
+        (course_id,),
+    )
+    discussions = cur.fetchall()
+
     cur.close()
-    return render_template('course_detail.html', course=course, details=details, reviews=reviews)
+    return render_template('course_detail.html', course=course, details=details, reviews=reviews, discussions=discussions)
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -239,6 +373,7 @@ def dashboard():
     role = session.get('role')
     
     cur = mysql.connection.cursor()
+    ensure_extended_tables(cur)
     
     if role == 'student':
         # Lấy khóa học đã đăng ký
@@ -250,6 +385,34 @@ def dashboard():
             ORDER BY dkkh.created_at DESC
         """, (user_id,))
         enrolled_courses = cur.fetchall()
+
+        # Tính tiến độ và chứng nhận
+        for course in enrolled_courses:
+            progress = compute_progress(cur, course['id'], user_id)
+            course['progress'] = progress
+
+            # Tự động cấp chứng nhận nếu hoàn thành
+            if progress['completed']:
+                cur.execute(
+                    "SELECT id, code FROM certificates WHERE user_id=%s AND khoa_hoc_id=%s",
+                    (user_id, course['id']),
+                )
+                cert = cur.fetchone()
+                if not cert:
+                    code = generate_code()
+                    cur.execute(
+                        """
+                        INSERT INTO certificates (user_id, khoa_hoc_id, code)
+                        VALUES (%s,%s,%s)
+                        """,
+                        (user_id, course['id'], code),
+                    )
+                    mysql.connection.commit()
+                    course['certificate_code'] = code
+                else:
+                    course['certificate_code'] = cert['code']
+            else:
+                course['certificate_code'] = None
         
         cur.close()
         return render_template('student/dashboard.html', enrolled_courses=enrolled_courses)
@@ -319,6 +482,56 @@ def enroll_course(course_id):
     
     return jsonify({'success': True, 'message': 'Đăng ký thành công!'})
 
+# ==================== THANH TOÁN / MUA KHÓA HỌC ====================
+
+@app.route('/course/<int:course_id>/buy', methods=['POST'])
+@login_required
+def buy_course(course_id):
+    cur = mysql.connection.cursor()
+    ensure_extended_tables(cur)
+
+    # Kiểm tra khóa học
+    cur.execute("SELECT * FROM khoa_hoc WHERE id=%s AND trang_thai='active'", (course_id,))
+    course = cur.fetchone()
+    if not course:
+        cur.close()
+        return jsonify({'success': False, 'message': 'Khóa học không tồn tại'}), 404
+
+    amount = course.get('gia', 0) or 0
+
+    # Tạo bản ghi thanh toán giả lập (đã thanh toán)
+    cur.execute(
+        """
+        INSERT INTO payments (user_id, khoa_hoc_id, amount, provider, status, txn_ref)
+        VALUES (%s,%s,%s,%s,%s,%s)
+        """,
+        (session['user_id'], course_id, amount, 'sandbox', 'paid', f'TXN-{course_id}-{session["user_id"]}-{int(datetime.now().timestamp())}'),
+    )
+
+    # Ghi enrollment (upsert)
+    cur.execute(
+        "SELECT id FROM dang_ky_khoa_hoc WHERE user_id=%s AND khoa_hoc_id=%s",
+        (session['user_id'], course_id),
+    )
+    existing = cur.fetchone()
+    if existing:
+        cur.execute(
+            "UPDATE dang_ky_khoa_hoc SET trang_thai='active', updated_at=CURRENT_TIMESTAMP WHERE id=%s",
+            (existing['id'],),
+        )
+    else:
+        cur.execute(
+            """
+            INSERT INTO dang_ky_khoa_hoc (user_id, khoa_hoc_id, trang_thai)
+            VALUES (%s,%s,'active')
+            """,
+            (session['user_id'], course_id),
+        )
+
+    mysql.connection.commit()
+    cur.close()
+    return jsonify({'success': True, 'message': 'Thanh toán thành công, bạn đã được ghi danh!'})
+
 # ==================== CHỨC NĂNG NÂNG CAO 1: HỆ THỐNG ĐÁNH GIÁ ====================
 
 @app.route('/course/<int:course_id>/review', methods=['POST'])
@@ -372,6 +585,39 @@ def add_review(course_id):
     flash('Cảm ơn bạn đã đánh giá!', 'success')
     return redirect(url_for('course_detail', course_id=course_id))
 
+# ==================== THẢO LUẬN KHÓA HỌC ====================
+
+@app.route('/course/<int:course_id>/discussion', methods=['POST'])
+@login_required
+def add_discussion(course_id):
+    """Thêm bình luận/thảo luận cho khóa học"""
+    content = request.form.get('noi_dung', '').strip()
+    if not content:
+        flash('Nội dung không được để trống', 'warning')
+        return redirect(url_for('course_detail', course_id=course_id))
+
+    cur = mysql.connection.cursor()
+    ensure_discussion_table(cur)
+
+    cur.execute("SELECT id FROM khoa_hoc WHERE id = %s", (course_id,))
+    if not cur.fetchone():
+        cur.close()
+        flash('Khóa học không tồn tại', 'danger')
+        return redirect(url_for('courses'))
+
+    cur.execute(
+        """
+        INSERT INTO thao_luan (khoa_hoc_id, user_id, noi_dung)
+        VALUES (%s, %s, %s)
+        """,
+        (course_id, session['user_id'], content),
+    )
+    mysql.connection.commit()
+    cur.close()
+
+    flash('Đã gửi thảo luận của bạn', 'success')
+    return redirect(url_for('course_detail', course_id=course_id))
+
 # ==================== CHỨC NĂNG NÂNG CAO 2: QUẢN LÝ BÀI TẬP ====================
 
 @app.route('/course/<int:course_id>/assignments/create', methods=['GET', 'POST'])
@@ -396,6 +642,96 @@ def create_assignment(course_id):
         return redirect(url_for('assignments', course_id=course_id))
     
     return render_template('teacher/create_assignment.html', course_id=course_id)
+
+# ==================== ĐIỂM DANH ====================
+
+@app.route('/teacher/attendance/<int:course_id>', methods=['GET', 'POST'])
+@teacher_required
+def teacher_attendance(course_id):
+    cur = mysql.connection.cursor()
+    ensure_extended_tables(cur)
+
+    # Kiểm tra giáo viên sở hữu khóa
+    cur.execute("SELECT * FROM khoa_hoc WHERE id=%s AND teacher_id=%s", (course_id, session['user_id']))
+    course = cur.fetchone()
+    if not course:
+        cur.close()
+        flash('Bạn không có quyền với khóa học này', 'danger')
+        return redirect(url_for('dashboard'))
+
+    # Danh sách buổi học
+    cur.execute("SELECT * FROM lich_hoc WHERE khoa_hoc_id=%s ORDER BY ngay_hoc, gio_bat_dau", (course_id,))
+    sessions = cur.fetchall()
+
+    session_id = request.args.get('session_id') or (sessions[0]['id'] if sessions else None)
+
+    # Học viên trong khóa
+    cur.execute(
+        """
+        SELECT u.id, u.ho_ten, u.email
+        FROM dang_ky_khoa_hoc d
+        JOIN users u ON d.user_id = u.id
+        WHERE d.khoa_hoc_id=%s AND d.trang_thai='active'
+        """,
+        (course_id,),
+    )
+    students = cur.fetchall()
+
+    if request.method == 'POST' and session_id:
+        # Lưu điểm danh
+        for s in students:
+            status = request.form.get(f'status_{s["id"]}', 'present')
+            cur.execute(
+                """
+                INSERT INTO diem_danh (lich_hoc_id, user_id, status)
+                VALUES (%s,%s,%s)
+                ON DUPLICATE KEY UPDATE status=VALUES(status), noted_at=CURRENT_TIMESTAMP
+                """,
+                (session_id, s['id'], status),
+            )
+        mysql.connection.commit()
+        flash('Đã lưu điểm danh', 'success')
+        return redirect(url_for('teacher_attendance', course_id=course_id, session_id=session_id))
+
+    # Lấy trạng thái điểm danh cho buổi chọn
+    attendance_map = {}
+    if session_id:
+        cur.execute(
+            "SELECT user_id, status FROM diem_danh WHERE lich_hoc_id=%s",
+            (session_id,),
+        )
+        for row in cur.fetchall():
+            attendance_map[row['user_id']] = row['status']
+
+    cur.close()
+    return render_template(
+        'teacher/attendance.html',
+        course=course,
+        sessions=sessions,
+        students=students,
+        session_id=int(session_id) if session_id else None,
+        attendance_map=attendance_map,
+    )
+
+# ==================== CHỨNG NHẬN ====================
+
+@app.route('/certificate/<int:course_id>')
+@login_required
+def view_certificate(course_id):
+    cur = mysql.connection.cursor()
+    ensure_extended_tables(cur)
+    cur.execute(
+        "SELECT * FROM certificates WHERE user_id=%s AND khoa_hoc_id=%s",
+        (session['user_id'], course_id),
+    )
+    cert = cur.fetchone()
+    cur.execute("SELECT tieu_de FROM khoa_hoc WHERE id=%s", (course_id,))
+    course = cur.fetchone()
+    cur.close()
+    if not cert:
+        flash('Chưa có chứng nhận cho khóa này', 'warning')
+        return redirect(url_for('dashboard'))
+    return render_template('certificate.html', cert=cert, course=course)
 
 @app.route('/course/<int:course_id>/assignments')
 @login_required

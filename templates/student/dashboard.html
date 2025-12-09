@@ -22,7 +22,9 @@
                             <tr>
                                 <th>Tên khóa học</th>
                                 <th>Trạng thái</th>
+                                <th>Tiến độ</th>
                                 <th>Ngày đăng ký</th>
+                                <th>Chứng nhận</th>
                                 <th>Thao tác</th>
                             </tr>
                         </thead>
@@ -35,7 +37,21 @@
                                         {{ course.enrollment_status }}
                                     </span>
                                 </td>
+                                <td>
+                                    {% set p = course.progress %}
+                                    <div class="small text-muted mb-1">Hiện diện: {{ "%.0f"|format(p.attendance_ratio*100) }}% | Bài bắt buộc: {{ p.submitted_required_assign }}/{{ p.total_required_assign }}</div>
+                                    <div class="progress" style="height:8px;">
+                                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ "%.0f"|format(p.progress_ratio*100) }}%;"></div>
+                                    </div>
+                                </td>
                                 <td>{{ course.enrolled_at.strftime('%d/%m/%Y') }}</td>
+                                <td>
+                                    {% if course.certificate_code %}
+                                        <a class="btn btn-sm btn-outline-success" href="{{ url_for('view_certificate', course_id=course.id) }}">Xem chứng nhận</a>
+                                    {% else %}
+                                        <span class="text-muted small">Chưa đủ điều kiện</span>
+                                    {% endif %}
+                                </td>
                                 <td>
                                     <a href="{{ url_for('course_detail', course_id=course.id) }}" class="btn btn-sm btn-primary-custom">
                                         <i class="bi bi-eye"></i> Xem

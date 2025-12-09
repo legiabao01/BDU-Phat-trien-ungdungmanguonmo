@@ -100,6 +100,38 @@
                     <p class="text-muted">Chưa có đánh giá nào.</p>
                 {% endif %}
             </div>
+
+            <!-- Discussion Section -->
+            <div class="mb-4">
+                <h3 class="title-gradient">Thảo luận</h3>
+                {% if session.user_id %}
+                <div class="card-soft mb-3">
+                    <form method="POST" action="{{ url_for('add_discussion', course_id=course.id) }}">
+                        <label class="form-label">Chia sẻ câu hỏi hoặc thảo luận</label>
+                        <textarea name="noi_dung" class="form-control mb-3" rows="3" placeholder="Nhập nội dung..."></textarea>
+                        <button type="submit" class="btn btn-primary-custom btn-sm">Gửi</button>
+                    </form>
+                </div>
+                {% else %}
+                <div class="alert alert-info">Đăng nhập để tham gia thảo luận.</div>
+                {% endif %}
+
+                {% if discussions %}
+                    {% for d in discussions %}
+                    <div class="card-soft mb-2">
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                            <div>
+                                <strong class="text-brand-sky">{{ d.ho_ten }}</strong>
+                                <small class="text-muted ms-2">{{ d.created_at.strftime('%d/%m/%Y %H:%M') }}</small>
+                            </div>
+                        </div>
+                        <p class="mb-0">{{ d.noi_dung }}</p>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">Chưa có thảo luận nào.</p>
+                {% endif %}
+            </div>
         </div>
 
         <div class="col-md-4">
@@ -119,8 +151,8 @@
                 </div>
                 <hr>
                 {% if session.user_id %}
-                    <button class="btn btn-primary-custom w-100 mb-2" onclick="enrollCourse({{ course.id }})">
-                        <i class="bi bi-cart-plus"></i> Đăng ký ngay
+                    <button class="btn btn-primary-custom w-100 mb-2" onclick="buyCourse({{ course.id }})">
+                        <i class="bi bi-cart-plus"></i> Mua/Đăng ký ngay
                     </button>
                 {% else %}
                     <a href="{{ url_for('login') }}" class="btn btn-primary-custom w-100 mb-2">
@@ -133,8 +165,8 @@
 </div>
 
 <script>
-function enrollCourse(courseId) {
-    fetch(`/api/enroll/${courseId}`, {
+function buyCourse(courseId) {
+    fetch(`/course/${courseId}/buy`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
