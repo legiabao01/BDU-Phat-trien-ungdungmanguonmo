@@ -75,27 +75,62 @@ def index():
 @app.route('/courses')
 def courses():
     """Trang danh sách khóa học"""
-    search = request.args.get('search', '')
+    search = request.args.get('search', '').strip()
     level = request.args.get('level', '')
-    
+    mode = request.args.get('mode', '')
+    sort = request.args.get('sort', 'new')
+ 
     cur = mysql.connection.cursor()
-    query = "SELECT * FROM khoa_hoc WHERE trang_thai = 'active'"
+    query = """
+        SELECT 
+            kh.*, 
+            COALESCE(AVG(dg.diem_so), 0) AS avg_score,
+            COUNT(DISTINCT dg.id) AS review_count,
+            COUNT(DISTINCT dkkh.id) AS student_count
+        FROM khoa_hoc kh
+        LEFT JOIN danh_gia_khoa_hoc dg ON dg.khoa_hoc_id = kh.id
+        LEFT JOIN dang_ky_khoa_hoc dkkh ON dkkh.khoa_hoc_id = kh.id
+        WHERE kh.trang_thai = 'active'
+    """
     params = []
     
     if search:
-        query += " AND (tieu_de LIKE %s OR mo_ta LIKE %s)"
+        query += " AND (kh.tieu_de LIKE %s OR kh.mo_ta LIKE %s)"
         params.extend([f'%{search}%', f'%{search}%'])
     
     if level:
-        query += " AND cap_do = %s"
+        query += " AND kh.cap_do = %s"
         params.append(level)
+ 
+    if mode:
+        query += " AND kh.hinh_thuc = %s"
+        params.append(mode)
     
-    query += " ORDER BY id DESC"
+    query += " GROUP BY kh.id"
+ 
+    order_clause = "kh.id DESC"
+    if sort == 'price_asc':
+        order_clause = "kh.gia ASC"
+    elif sort == 'price_desc':
+        order_clause = "kh.gia DESC"
+    elif sort == 'popular':
+        order_clause = "student_count DESC, kh.id DESC"
+    elif sort == 'rating':
+        order_clause = "avg_score DESC, review_count DESC"
+ 
+    query += f" ORDER BY {order_clause}"
     cur.execute(query, params)
     courses = cur.fetchall()
     cur.close()
     
-    return render_template('courses.html', courses=courses, search=search, level=level)
+    return render_template(
+        'courses.html', 
+        courses=courses, 
+        search=search, 
+        level=level,
+        mode=mode,
+        sort=sort,
+    )
 
 @app.route('/course/<int:course_id>')
 def course_detail(course_id):
