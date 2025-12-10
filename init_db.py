@@ -127,7 +127,7 @@ def init_database():
             cursor.execute(
                 """
                 INSERT INTO users (ho_ten, email, password_hash, role)
-                VALUES (%s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s)
                 """,
                 (name, email, password_hash, role),
             )
@@ -355,7 +355,7 @@ def init_database():
                     """,
                     schedules,
                 )
-                conn.commit()
+        conn.commit()
 
         print("✅ Database đã được khởi tạo và nạp dữ liệu mẫu!")
         print("\nTài khoản mặc định:")

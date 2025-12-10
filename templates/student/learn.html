@@ -262,7 +262,39 @@
                                                 <p class="text-muted mb-2">{{ item.noi_dung }}</p>
                                             </div>
                                             {% endif %}
-                                            {% if item.hinh_anh %}
+                                            {% if item.video_path %}
+                                            <div class="mb-3">
+                                                <div class="video-container">
+                                                    {% if 'youtube.com' in item.video_path or 'youtu.be' in item.video_path %}
+                                                        {% set video_id = item.video_path.split('v=')[1].split('&')[0] if 'v=' in item.video_path else item.video_path.split('/')[-1] %}
+                                                        <div class="ratio ratio-16x9">
+                                                            <iframe src="https://www.youtube.com/embed/{{ video_id }}" 
+                                                                    frameborder="0" 
+                                                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                                                    allowfullscreen></iframe>
+                                                        </div>
+                                                    {% elif 'vimeo.com' in item.video_path %}
+                                                        {% set video_id = item.video_path.split('/')[-1] %}
+                                                        <div class="ratio ratio-16x9">
+                                                            <iframe src="https://player.vimeo.com/video/{{ video_id }}" 
+                                                                    frameborder="0" 
+                                                                    allow="autoplay; fullscreen; picture-in-picture" 
+                                                                    allowfullscreen></iframe>
+                                                        </div>
+                                                    {% else %}
+                                                        <video controls class="w-100 rounded shadow-sm" style="max-height: 500px;">
+                                                            <source src="{{ item.video_path }}" type="video/mp4">
+                                                            Trình duyệt của bạn không hỗ trợ video tag.
+                                                        </video>
+                                                    {% endif %}
+                                                </div>
+                                                {% if item.video_duration %}
+                                                <small class="text-muted">
+                                                    <i class="bi bi-clock"></i> Thời lượng: {{ item.video_duration // 60 }}:{{ '%02d' % (item.video_duration % 60) }}
+                                                </small>
+                                                {% endif %}
+                                            </div>
+                                            {% elif item.hinh_anh %}
                                             <div class="mb-3">
                                                 <img src="{{ item.hinh_anh }}" class="img-fluid rounded shadow-sm" 
                                                      style="max-height: 400px; width: auto; cursor: pointer;"
@@ -804,6 +836,22 @@ function scrollToDiscussion() {
     showSection('discussion');
     setTimeout(() => {
         document.getElementById('discussion').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+}
+
+function scrollToLesson(lessonIndex) {
+    showSection('curriculum');
+    setTimeout(() => {
+        const lessonElements = document.querySelectorAll('.timeline-item');
+        if (lessonElements[lessonIndex - 1]) {
+            lessonElements[lessonIndex - 1].scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // Highlight lesson
+            lessonElements.forEach(el => el.style.backgroundColor = '');
+            lessonElements[lessonIndex - 1].style.backgroundColor = '#e3f2fd';
+            setTimeout(() => {
+                lessonElements[lessonIndex - 1].style.backgroundColor = '';
+            }, 2000);
+        }
     }, 100);
 }
 </script>

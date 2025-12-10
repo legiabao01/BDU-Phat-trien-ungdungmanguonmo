@@ -8,10 +8,17 @@ Hệ thống quản lý học trực tuyến với đầy đủ chức năng cho
 
 ## 🛠️ Công nghệ sử dụng
 
+### Backend chính (Flask - Legacy)
 - **Backend**: Python Flask
 - **Frontend**: Jinja2 Templates, HTML, CSS, JavaScript
 - **Database**: MySQL
 - **Authentication**: Session-based với password hashing
+
+### API Backend (FastAPI - Mới)
+- **Backend API**: FastAPI với PostgreSQL
+- **Database**: PostgreSQL
+- **Authentication**: JWT (JSON Web Tokens)
+- **API Documentation**: Swagger UI tại `/docs`
 
 ## 📦 Cài đặt
 
@@ -60,7 +67,7 @@ MYSQL_PASSWORD=your_password
 MYSQL_DB=webhoctructuyen
 ```
 
-### 5. Chạy ứng dụng
+### 5. Chạy ứng dụng Flask (Legacy)
 
 ```bash
 python app.py
@@ -68,23 +75,106 @@ python app.py
 
 Truy cập: http://localhost:5000
 
+### 6. Chạy FastAPI Backend (Mới)
+
+1. **Cài đặt PostgreSQL** và tạo database:
+```bash
+# Tạo database và user
+psql -U postgres
+CREATE DATABASE elearning;
+CREATE USER elearn WITH PASSWORD 'elearn123';
+GRANT ALL PRIVILEGES ON DATABASE elearning TO elearn;
+\q
+```
+
+2. **Chạy schema PostgreSQL**:
+```bash
+psql -U elearn -d elearning -f database/schema_pg.sql
+```
+
+3. **Cấu hình environment**:
+Tạo file `fastapi_app/.env`:
+```env
+DATABASE_URL=postgresql+psycopg://elearn:elearn123@localhost:5432/elearning
+JWT_SECRET=your-secret-key-here-change-in-production
+JWT_ALG=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+REFRESH_TOKEN_EXPIRE_MINUTES=10080
+ALLOWED_ORIGINS=["http://localhost:3000","http://127.0.0.1:3000"]
+```
+
+4. **Cài đặt dependencies FastAPI**:
+```bash
+pip install -r fastapi_app/requirements.txt
+pip install email-validator bcrypt==3.2.2
+```
+
+5. **Chạy server**:
+```bash
+uvicorn fastapi_app.main:app --env-file fastapi_app/.env --port 8001
+```
+
+6. **Truy cập**:
+- API Docs (Swagger): http://127.0.0.1:8001/docs
+- Health check: http://127.0.0.1:8001/health
+
+### 7. Seed dữ liệu mẫu (PostgreSQL)
+
+```bash
+psql -U elearn -d elearning -f database/seed_courses.sql
+```
+
+**Kiểm tra dữ liệu**: Mở Swagger tại `/docs` và gọi `GET /api/courses`
+
 ## 👥 Tài khoản mặc định
 
 - **Admin**: admin@example.com / admin123
 - **Teacher**: teacher@example.com / teacher123
 
+## 🔌 FastAPI Endpoints
+
+### Authentication
+- `POST /api/auth/register` - Đăng ký user mới
+- `POST /api/auth/login` - Đăng nhập (nhận JWT token)
+  - Hỗ trợ form (username/password) hoặc JSON (email/password)
+- `GET /api/users/me` - Lấy thông tin user hiện tại (cần Bearer token)
+
+### Courses
+- `GET /api/courses` - Lấy danh sách khóa học
+- `POST /api/courses` - Tạo khóa học mới
+- `GET /api/courses/{course_id}/lessons` - Lấy danh sách bài học của khóa học
+
+### Health Check
+- `GET /health` - Kiểm tra trạng thái server
+
+**Lưu ý**: 
+- Sử dụng Swagger UI tại `/docs` để test API
+- Authorize với Bearer token: Nhấn nút "Authorize" → chọn "BearerAuth" → dán token
+
 ## 📁 Cấu trúc dự án
 
 ```
 Webhoctructuyen/
-├── app.py                 # File chính của ứng dụng
-├── requirements.txt       # Dependencies
+├── app.py                 # File chính Flask (legacy)
+├── requirements.txt       # Dependencies Flask
 ├── .env.example          # Mẫu file cấu hình
 ├── .gitignore            # Git ignore file
 ├── README.md             # File này
 ├── database/
-│   └── schema.sql        # Database schema
-├── templates/            # Jinja2 templates
+│   ├── schema.sql        # MySQL schema (legacy)
+│   ├── schema_pg.sql     # PostgreSQL schema (FastAPI)
+│   └── seed_courses.sql  # Seed data mẫu
+├── fastapi_app/          # FastAPI Backend (mới)
+│   ├── main.py          # Entry point FastAPI
+│   ├── requirements.txt  # Dependencies FastAPI
+│   ├── .env             # Environment variables
+│   ├── core/            # Core config, security
+│   ├── db/              # Database session, base
+│   ├── models/          # SQLAlchemy models
+│   ├── schemas/         # Pydantic schemas
+│   └── api/
+│       └── routes/      # API routes
+├── templates/            # Jinja2 templates (Flask)
 │   ├── index.html
 │   ├── courses.html
 │   ├── course_detail.html

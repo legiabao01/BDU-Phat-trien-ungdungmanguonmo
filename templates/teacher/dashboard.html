@@ -28,6 +28,9 @@
                                 <td><strong>{{ course.tieu_de }}</strong></td>
                                 <td><span class="badge-custom badge-info">{{ course.so_hoc_vien }} học viên</span></td>
                                 <td>
+                                    <a href="{{ url_for('teacher_course_content', course_id=course.id) }}" class="btn btn-sm btn-primary">
+                                        <i class="bi bi-play-circle"></i> Nội dung
+                                    </a>
                                     <a href="{{ url_for('teacher_schedule', course_id=course.id) }}" class="btn btn-sm btn-success">
                                         <i class="bi bi-calendar-plus"></i> Lịch học
                                     </a>

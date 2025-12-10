@@ -102,6 +102,24 @@ def ensure_extended_tables(cur):
         cur.execute("ALTER TABLE lich_hoc ADD COLUMN bai_giang VARCHAR(500) NULL AFTER link_zoom")
     except:
         pass  # Bỏ qua nếu đã có
+    
+    # Đảm bảo bảng chi_tiet_khoa_hoc có các trường video
+    try:
+        cur.execute("ALTER TABLE chi_tiet_khoa_hoc ADD COLUMN video_path VARCHAR(500) NULL AFTER hinh_anh")
+    except:
+        pass
+    try:
+        cur.execute("ALTER TABLE chi_tiet_khoa_hoc ADD COLUMN video_duration INT DEFAULT 0 AFTER video_path")
+    except:
+        pass
+    try:
+        cur.execute("ALTER TABLE chi_tiet_khoa_hoc ADD COLUMN is_unlocked BOOLEAN DEFAULT TRUE AFTER thu_tu")
+    except:
+        pass
+    try:
+        cur.execute("ALTER TABLE chi_tiet_khoa_hoc ADD COLUMN unlock_date DATETIME NULL AFTER is_unlocked")
+    except:
+        pass
 
 
 def generate_code(prefix="CERT"):
@@ -323,13 +341,28 @@ def student_learn(course_id):
         cur.execute("SELECT * FROM users WHERE id = %s", (course['teacher_id'],))
         teacher = cur.fetchone()
     
-    # Lấy nội dung khóa học
+    # Lấy nội dung khóa học với logic drip content
     cur.execute("""
         SELECT * FROM chi_tiet_khoa_hoc 
         WHERE khoa_hoc_id = %s 
         ORDER BY thu_tu ASC
     """, (course_id,))
-    course_content = cur.fetchall()
+    all_content = cur.fetchall()
+    
+    # Lọc nội dung theo drip content (chỉ hiển thị bài đã mở khóa)
+    today = datetime.now()
+    course_content = []
+    for item in all_content:
+        # Nếu bài học đã mở khóa hoặc không có unlock_date
+        if item.get('is_unlocked', True) or not item.get('unlock_date'):
+            course_content.append(item)
+        # Nếu có unlock_date và đã đến thời gian mở
+        elif item.get('unlock_date'):
+            unlock_date = item['unlock_date']
+            if isinstance(unlock_date, str):
+                unlock_date = datetime.strptime(unlock_date, '%Y-%m-%d %H:%M:%S')
+            if unlock_date <= today:
+                course_content.append(item)
     
     # Lấy lịch học
     cur.execute("""
@@ -477,7 +510,7 @@ def course_detail(course_id):
             (session['user_id'], course_id),
         )
         is_enrolled = cur.fetchone() is not None
-
+    
     cur.close()
     return render_template('course_detail.html', course=course, details=details, reviews=reviews, discussions=discussions, is_enrolled=is_enrolled)
 
@@ -948,6 +981,93 @@ def add_discussion(course_id):
 
     flash('Đã gửi thảo luận của bạn', 'success')
     return redirect(request.referrer or url_for('course_detail', course_id=course_id))
+
+# ==================== QUẢN LÝ NỘI DUNG KHÓA HỌC (VIDEO UPLOAD) ====================
+
+@app.route('/teacher/course-content/<int:course_id>')
+@teacher_required
+def teacher_course_content(course_id):
+    """Quản lý nội dung khóa học (bài học/video)"""
+    cur = mysql.connection.cursor()
+    
+    # Kiểm tra giáo viên sở hữu khóa
+    cur.execute("SELECT * FROM khoa_hoc WHERE id=%s AND teacher_id=%s", (course_id, session['user_id']))
+    course = cur.fetchone()
+    if not course:
+        cur.close()
+        flash('Bạn không có quyền với khóa học này', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    # Lấy danh sách bài học
+    cur.execute("""
+        SELECT * FROM chi_tiet_khoa_hoc 
+        WHERE khoa_hoc_id=%s 
+        ORDER BY thu_tu ASC
+    """, (course_id,))
+    lessons = cur.fetchall()
+    
+    cur.close()
+    return render_template('teacher/course_content.html', course=course, lessons=lessons)
+
+@app.route('/teacher/course-content/<int:course_id>/create', methods=['GET', 'POST'])
+@teacher_required
+def teacher_create_lesson(course_id):
+    """Tạo bài học mới với video"""
+    cur = mysql.connection.cursor()
+    
+    # Kiểm tra quyền
+    cur.execute("SELECT * FROM khoa_hoc WHERE id=%s AND teacher_id=%s", (course_id, session['user_id']))
+    course = cur.fetchone()
+    if not course:
+        cur.close()
+        flash('Bạn không có quyền với khóa học này', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    if request.method == 'POST':
+        tieu_de_muc = request.form.get('tieu_de_muc')
+        noi_dung = request.form.get('noi_dung', '')
+        thu_tu = int(request.form.get('thu_tu', 0))
+        is_unlocked = 1 if request.form.get('is_unlocked') == 'on' else 0
+        unlock_date = request.form.get('unlock_date') or None
+        
+        # Xử lý upload video
+        video_path = None
+        video_duration = int(request.form.get('video_duration', 0)) or 0
+        
+        if 'video_file' in request.files:
+            file = request.files['video_file']
+            if file.filename:
+                import os
+                
+                # Tạo thư mục upload
+                upload_folder = os.path.join('static', 'uploads', 'videos', str(course_id))
+                os.makedirs(upload_folder, exist_ok=True)
+                
+                # Lưu file
+                filename = f"{course_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}_{file.filename}"
+                file_path = os.path.join(upload_folder, filename)
+                file.save(file_path)
+                video_path = '/' + file_path.replace('\\', '/')
+        
+        # Nếu không có file, dùng link
+        if not video_path:
+            video_link = request.form.get('video_link', '').strip()
+            if video_link:
+                video_path = video_link
+        
+        cur.execute("""
+            INSERT INTO chi_tiet_khoa_hoc (khoa_hoc_id, tieu_de_muc, noi_dung, thu_tu, video_path, video_duration, is_unlocked, unlock_date)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """, (course_id, tieu_de_muc, noi_dung, thu_tu, video_path, video_duration, is_unlocked, unlock_date))
+        
+        mysql.connection.commit()
+        cur.close()
+        
+        flash('Đã thêm bài học mới!', 'success')
+        return redirect(url_for('teacher_course_content', course_id=course_id))
+    
+    cur.close()
+    return render_template('teacher/create_lesson.html', course=course)
 
 # ==================== CHỨC NĂNG NÂNG CAO 2: QUẢN LÝ BÀI TẬP ====================
 

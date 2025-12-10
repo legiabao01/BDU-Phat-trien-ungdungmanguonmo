@@ -45,7 +45,11 @@ CREATE TABLE IF NOT EXISTS chi_tiet_khoa_hoc (
     tieu_de_muc VARCHAR(200) NOT NULL,
     noi_dung TEXT,
     hinh_anh VARCHAR(255),
+    video_path VARCHAR(500),
+    video_duration INT DEFAULT 0,
     thu_tu INT DEFAULT 0,
+    is_unlocked BOOLEAN DEFAULT TRUE,
+    unlock_date DATETIME,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (khoa_hoc_id) REFERENCES khoa_hoc(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
