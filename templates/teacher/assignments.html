@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}Quản lý bài tập - {{ course.tieu_de }}{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="title-gradient mb-0">
+            <i class="bi bi-file-earmark-check"></i> Quản lý bài tập
+        </h1>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-custom">
+            <i class="bi bi-arrow-left"></i> Về Dashboard
+        </a>
+    </div>
+
+    <div class="card-soft mb-4">
+        <h5 class="mb-3">
+            <i class="bi bi-book"></i> {{ course.tieu_de }}
+        </h5>
+        <p class="text-muted mb-4">{{ course.mo_ta or 'Không có mô tả' }}</p>
+    </div>
+
+    <!-- Form thêm bài tập -->
+    <div class="card-soft mb-4">
+        <h4 class="title-gradient mb-3">
+            <i class="bi bi-plus-circle"></i> Tạo bài tập mới
+        </h4>
+        <form method="POST" action="{{ url_for('teacher_create_assignment', course_id=course.id) }}">
+            <div class="row">
+                <div class="col-md-12 mb-3">
+                    <label class="form-label">Tiêu đề bài tập <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" name="tieu_de" required 
+                           placeholder="VD: Bài tập Flask CRUD">
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-12 mb-3">
+                    <label class="form-label">Mô tả ngắn</label>
+                    <input type="text" class="form-control" name="mo_ta" 
+                           placeholder="Mô tả ngắn gọn về bài tập">
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-12 mb-3">
+                    <label class="form-label">Đề bài <span class="text-danger">*</span></label>
+                    <textarea class="form-control" name="noi_dung" rows="8" required
+                              placeholder="Nhập đề bài chi tiết cho học viên..."></textarea>
+                    <small class="text-muted">
+                        <i class="bi bi-info-circle"></i> Đề bài này sẽ hiển thị cho học viên khi họ xem bài tập.
+                    </small>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Hạn nộp</label>
+                    <input type="datetime-local" class="form-control" name="han_nop">
+                    <small class="text-muted">Để trống nếu không có hạn nộp</small>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div class="form-check mt-4">
+                        <input class="form-check-input" type="checkbox" name="is_required" id="is_required" checked>
+                        <label class="form-check-label" for="is_required">
+                            <strong>Bài tập bắt buộc</strong>
+                        </label>
+                        <small class="d-block text-muted">
+                            Bài tập bắt buộc sẽ được tính vào tiến độ hoàn thành khóa học
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary-custom">
+                <i class="bi bi-check-circle"></i> Tạo bài tập
+            </button>
+        </form>
+    </div>
+
+    <!-- Danh sách bài tập -->
+    <div class="card-soft">
+        <h4 class="title-gradient mb-3">
+            <i class="bi bi-list-ul"></i> Danh sách bài tập ({{ assignments|length }} bài)
+        </h4>
+        
+        {% if assignments %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 5%;">#</th>
+                        <th style="width: 25%;">Tiêu đề</th>
+                        <th style="width: 15%;">Hạn nộp</th>
+                        <th style="width: 10%;">Loại</th>
+                        <th style="width: 15%;">Bài nộp</th>
+                        <th style="width: 15%;">Đã chấm</th>
+                        <th style="width: 15%;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for a in assignments %}
+                    <tr>
+                        <td><strong>{{ loop.index }}</strong></td>
+                        <td>
+                            <strong>{{ a.tieu_de }}</strong>
+                            {% if a.mo_ta %}
+                            <br><small class="text-muted">{{ a.mo_ta }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if a.han_nop %}
+                            <i class="bi bi-clock text-warning"></i>
+                            <strong>{{ a.han_nop.strftime('%d/%m/%Y %H:%M') }}</strong>
+                            {% else %}
+                            <span class="text-muted">Không có hạn</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if a.is_required %}
+                            <span class="badge bg-danger">
+                                <i class="bi bi-exclamation-triangle"></i> Bắt buộc
+                            </span>
+                            {% else %}
+                            <span class="badge bg-secondary">Tùy chọn</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-info">
+                                <i class="bi bi-people"></i> {{ a.submission_count }} bài
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge bg-success">
+                                <i class="bi bi-check-circle"></i> {{ a.graded_count }} bài
+                            </span>
+                        </td>
+                        <td>
+                            <a href="{{ url_for('teacher_view_submissions', course_id=course.id, assignment_id=a.id) }}" 
+                               class="btn btn-sm btn-primary">
+                                <i class="bi bi-eye"></i> Xem bài nộp
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> Chưa có bài tập nào. Hãy tạo bài tập đầu tiên!
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

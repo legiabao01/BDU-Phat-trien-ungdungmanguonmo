@@ -1,14 +1,22 @@
 {% extends "base.html" %}
 
-{% block title %}Tạo bài tập - Giáo viên{% endblock %}
+{% block title %}Tạo bài tập - {{ course.tieu_de }}{% endblock %}
 
 {% block content %}
 <div class="container my-5">
     <div class="row justify-content-center">
         <div class="col-md-8">
             <div class="card-soft">
-                <h2 class="title-gradient mb-4">Tạo bài tập mới</h2>
-                <form method="POST" action="{{ url_for('create_assignment', course_id=course_id) }}">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 class="title-gradient mb-0">Tạo bài tập mới</h2>
+                    <a href="{{ url_for('teacher_assignments', course_id=course.id) }}" class="btn btn-outline-custom">
+                        <i class="bi bi-arrow-left"></i> Quay lại
+                    </a>
+                </div>
+                <div class="mb-3">
+                    <strong>Khóa học:</strong> {{ course.tieu_de }}
+                </div>
+                <form method="POST" action="{{ url_for('teacher_create_assignment', course_id=course.id) }}">
                     <div class="mb-3">
                         <label for="tieu_de" class="form-label">Tiêu đề bài tập</label>
                         <input type="text" class="form-control" id="tieu_de" name="tieu_de" required placeholder="Nhập tiêu đề bài tập...">
@@ -18,18 +26,33 @@
                         <textarea class="form-control" id="mo_ta" name="mo_ta" rows="3" placeholder="Mô tả ngắn về bài tập..."></textarea>
                     </div>
                     <div class="mb-3">
-                        <label for="noi_dung" class="form-label">Nội dung bài tập</label>
-                        <textarea class="form-control" id="noi_dung" name="noi_dung" rows="10" required placeholder="Nhập nội dung chi tiết của bài tập..."></textarea>
+                        <label for="noi_dung" class="form-label">Đề bài <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="noi_dung" name="noi_dung" rows="10" required placeholder="Nhập đề bài chi tiết cho học viên..."></textarea>
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i> Đề bài này sẽ hiển thị cho học viên khi họ xem bài tập.
+                        </small>
                     </div>
-                    <div class="mb-4">
+                    <div class="mb-3">
                         <label for="han_nop" class="form-label">Hạn nộp</label>
                         <input type="datetime-local" class="form-control" id="han_nop" name="han_nop">
+                        <small class="text-muted">Để trống nếu không có hạn nộp</small>
+                    </div>
+                    <div class="mb-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="is_required" id="is_required" checked>
+                            <label class="form-check-label" for="is_required">
+                                <strong>Bài tập bắt buộc</strong>
+                            </label>
+                            <small class="d-block text-muted">
+                                Bài tập bắt buộc sẽ được tính vào tiến độ hoàn thành khóa học
+                            </small>
+                        </div>
                     </div>
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary-custom">
                             <i class="bi bi-check-circle"></i> Tạo bài tập
                         </button>
-                        <a href="{{ url_for('assignments', course_id=course_id) }}" class="btn btn-outline-custom">
+                        <a href="{{ url_for('teacher_assignments', course_id=course.id) }}" class="btn btn-outline-custom">
                             <i class="bi bi-x-circle"></i> Hủy
                         </a>
                     </div>

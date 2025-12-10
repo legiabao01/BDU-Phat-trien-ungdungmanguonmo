@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}Bài nộp - {{ assignment.tieu_de }}{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="title-gradient mb-0">
+            <i class="bi bi-file-earmark-arrow-up"></i> Bài nộp của học viên
+        </h1>
+        <a href="{{ url_for('teacher_assignments', course_id=course.id) }}" class="btn btn-outline-custom">
+            <i class="bi bi-arrow-left"></i> Quay lại
+        </a>
+    </div>
+
+    <div class="card-soft mb-4">
+        <h5 class="mb-3">
+            <i class="bi bi-file-earmark-text"></i> {{ assignment.tieu_de }}
+        </h5>
+        {% if assignment.mo_ta %}
+        <p class="text-muted mb-2">{{ assignment.mo_ta }}</p>
+        {% endif %}
+        {% if assignment.noi_dung %}
+        <div class="p-3 bg-light rounded border mb-2">
+            <strong>Đề bài:</strong>
+            <div style="white-space: pre-wrap;">{{ assignment.noi_dung }}</div>
+        </div>
+        {% endif %}
+        {% if assignment.han_nop %}
+        <p class="mb-0">
+            <i class="bi bi-clock text-warning"></i> 
+            <strong>Hạn nộp:</strong> {{ assignment.han_nop.strftime('%d/%m/%Y %H:%M') }}
+        </p>
+        {% endif %}
+    </div>
+
+    <!-- Danh sách bài nộp -->
+    <div class="card-soft">
+        <h4 class="title-gradient mb-3">
+            <i class="bi bi-list-ul"></i> Danh sách bài nộp ({{ submissions|length }} bài)
+        </h4>
+        
+        {% if submissions %}
+        <div class="row">
+            {% for sub in submissions %}
+            <div class="col-md-6 mb-4">
+                <div class="card border h-100 {% if sub.trang_thai == 'graded' %}border-success{% endif %}">
+                    <div class="card-header bg-light">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ sub.ho_ten }}</strong>
+                                <br>
+                                <small class="text-muted">{{ sub.email }}</small>
+                            </div>
+                            <div>
+                                {% if sub.trang_thai == 'graded' %}
+                                <span class="badge bg-success">
+                                    <i class="bi bi-check-circle"></i> Đã chấm
+                                </span>
+                                {% else %}
+                                <span class="badge bg-warning">
+                                    <i class="bi bi-clock"></i> Chưa chấm
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p class="mb-2">
+                            <small class="text-muted">
+                                <i class="bi bi-calendar"></i> Nộp lúc: {{ sub.created_at.strftime('%d/%m/%Y %H:%M') }}
+                            </small>
+                        </p>
+                        
+                        {% if sub.noi_dung %}
+                        <div class="mb-3 p-2 bg-light rounded">
+                            <strong>Nội dung:</strong>
+                            <div style="white-space: pre-wrap;">{{ sub.noi_dung }}</div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if sub.file_path %}
+                        <div class="mb-3">
+                            <a href="{{ sub.file_path }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-download"></i> Tải file đính kèm
+                            </a>
+                        </div>
+                        {% endif %}
+                        
+                        {% if sub.diem_so is not none %}
+                        <div class="mb-2">
+                            <strong>Điểm:</strong> 
+                            <span class="badge bg-primary fs-6">{{ sub.diem_so }}/10</span>
+                        </div>
+                        {% endif %}
+                        
+                        {% if sub.nhan_xet %}
+                        <div class="mb-3 p-2 bg-info bg-opacity-10 rounded">
+                            <strong>Nhận xét:</strong>
+                            <div style="white-space: pre-wrap;">{{ sub.nhan_xet }}</div>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Form chấm điểm -->
+                        <form method="POST" action="{{ url_for('teacher_grade_submission', course_id=course.id, assignment_id=assignment.id) }}">
+                            <input type="hidden" name="submission_id" value="{{ sub.id }}">
+                            <div class="mb-2">
+                                <label class="form-label">Điểm (0-10)</label>
+                                <input type="number" class="form-control" name="diem_so" 
+                                       value="{{ sub.diem_so or '' }}" min="0" max="10" step="0.1" required>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label">Nhận xét</label>
+                                <textarea class="form-control" name="nhan_xet" rows="3" 
+                                          placeholder="Nhận xét cho học viên...">{{ sub.nhan_xet or '' }}</textarea>
+                            </div>
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="mark_done" id="mark_done_{{ sub.id }}" 
+                                           {% if sub.trang_thai == 'graded' %}checked{% endif %}>
+                                    <label class="form-check-label" for="mark_done_{{ sub.id }}">
+                                        Đánh dấu đã chấm xong
+                                    </label>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-check-circle"></i> Lưu điểm và nhận xét
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> Chưa có học viên nào nộp bài cho bài tập này.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

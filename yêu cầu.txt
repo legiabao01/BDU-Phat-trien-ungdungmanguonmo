@@ -1,0 +1,15 @@
+Chủ đề:
+Course Platform (Nền tảng học trực tuyến)
+• Mô tả: Tạo khóa học, upload video, quản lý bài học, track progress
+• Công nghệ: FastAPI, PostgreSQL, File upload, JWT
+• Frontend: Video player, lesson tree, progress tracking, certificates
+• Chức năng nâng cao: Video streaming, drip content, discussion forum
+-------
+Yêu cầu chung về hệ thống
+• Backend: Ngôn ngữ lập trình Python, Pydantic, ORM, FastAPI, JWT, …
+• Frontend: Tùy chọn framework/platform
+• Database: SQLLite/PostgresDB
+• Collaboration & Code management: Github, mỗi nhóm commit ít nhất 10
+commits.
+• Deployment: Render + Vercel
+Ngoài ra có thêm các yêu cầu nâng cao (cộng +0,5 cho mỗi chức năng hoàn chỉnh)

@@ -100,9 +100,111 @@
     </main>
 
     <!-- Footer -->
-    <footer class="bg-dark text-light mt-5 py-4">
-        <div class="container text-center">
-            <p class="mb-0">&copy; 2024 Ứng dụng Học Trực Tuyến. Môn Phát triển ứng dụng mã nguồn mở.</p>
+    <footer class="footer-custom mt-5">
+        <div class="container py-5">
+            <!-- Main Title and Tagline -->
+            <div class="text-center mb-5">
+                <h2 class="footer-title gradient-text mb-2">Học Trực Tuyến</h2>
+                <p class="footer-tagline text-light">Học hiệu quả, kết nối tri thức. Khóa học trực tuyến toàn diện cho mọi người.</p>
+            </div>
+
+            <!-- Office Locations and Quick Links -->
+            <div class="row mb-4">
+                <!-- Sài Gòn Office -->
+                <div class="col-md-4 mb-4 mb-md-0">
+                    <h5 class="footer-section-title mb-3">
+                        <i class="bi bi-geo-alt-fill"></i> VĂN PHÒNG SÀI GÒN
+                    </h5>
+                    <div class="footer-contact-item mb-2">
+                        <i class="bi bi-house-door-fill me-2"></i>
+                        <span>Tầng 4, Tòa nhà DMA, 45 Đinh Tiên Hoàng, Phường Bến Nghé, Quận 1, TP.HCM</span>
+                    </div>
+                    <div class="footer-contact-item mb-2">
+                        <i class="bi bi-telephone-fill me-2"></i>
+                        <a href="tel:+842839100168" class="text-light text-decoration-none">(+84) 28 3910 0168</a>
+                    </div>
+                    <div class="footer-contact-item">
+                        <i class="bi bi-envelope-fill me-2"></i>
+                        <a href="mailto:contact@hoctructuyen.edu.vn" class="text-light text-decoration-none">contact@hoctructuyen.edu.vn</a>
+                    </div>
+                </div>
+
+                <!-- Quick Links -->
+                <div class="col-md-4 mb-4 mb-md-0">
+                    <h5 class="footer-section-title mb-3">
+                        <i class="bi bi-link-45deg"></i> LIÊN KẾT NHANH
+                    </h5>
+                    <ul class="footer-links list-unstyled">
+                        <li class="mb-2">
+                            <a href="{{ url_for('courses') }}" class="text-light text-decoration-none">
+                                <i class="bi bi-chevron-right me-2"></i>Khóa học
+                            </a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="{{ url_for('index') }}" class="text-light text-decoration-none">
+                                <i class="bi bi-chevron-right me-2"></i>Về chúng tôi
+                            </a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="{{ url_for('courses') }}" class="text-light text-decoration-none">
+                                <i class="bi bi-chevron-right me-2"></i>Bảng giá
+                            </a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="{{ url_for('index') }}#contact" class="text-light text-decoration-none">
+                                <i class="bi bi-chevron-right me-2"></i>Liên hệ & Hỗ trợ
+                            </a>
+                        </li>
+                        {% if session.user_id and session.role == 'student' %}
+                        <li class="mb-2">
+                            <a href="{{ url_for('dashboard') }}" class="text-light text-decoration-none">
+                                <i class="bi bi-chevron-right me-2"></i>Khóa học của tôi
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </div>
+
+                <!-- Hà Nội Office -->
+                <div class="col-md-4">
+                    <h5 class="footer-section-title mb-3">
+                        <i class="bi bi-geo-alt-fill"></i> VĂN PHÒNG HÀ NỘI
+                    </h5>
+                    <div class="footer-contact-item mb-2">
+                        <i class="bi bi-house-door-fill me-2"></i>
+                        <span>Tầng 5, Tòa nhà TechHub, 123 Láng Hạ, Phường Láng Hạ, Quận Đống Đa, Hà Nội</span>
+                    </div>
+                    <div class="footer-contact-item mb-2">
+                        <i class="bi bi-telephone-fill me-2"></i>
+                        <a href="tel:+842439100168" class="text-light text-decoration-none">(+84) 24 3910 0168</a>
+                    </div>
+                    <div class="footer-contact-item">
+                        <i class="bi bi-envelope-fill me-2"></i>
+                        <a href="mailto:hanoi@hoctructuyen.edu.vn" class="text-light text-decoration-none">hanoi@hoctructuyen.edu.vn</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Social Media Icons -->
+            <div class="text-center mb-4">
+                <div class="footer-social-icons d-flex justify-content-center gap-3">
+                    <a href="https://www.facebook.com/mindxschool" target="_blank" 
+                       class="footer-social-icon" title="Facebook">
+                        <i class="bi bi-facebook"></i>
+                    </a>
+                    <a href="https://www.youtube.com/c/tôiđicodedạoblog/videos" target="_blank" 
+                       class="footer-social-icon" title="YouTube">
+                        <i class="bi bi-youtube"></i>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Copyright -->
+            <div class="text-center pt-3 border-top border-secondary">
+                <p class="mb-0 text-light small">
+                    &copy; 2025 HỌC TRỰC TUYẾN. Tất cả quyền được bảo lưu.
+                </p>
+            </div>
         </div>
     </footer>
 

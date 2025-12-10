@@ -235,7 +235,7 @@ def courses():
     level = request.args.get('level', '')
     mode = request.args.get('mode', '')
     sort = request.args.get('sort', 'new')
- 
+    
     cur = mysql.connection.cursor()
     query = """
         SELECT 
@@ -257,7 +257,7 @@ def courses():
     if level:
         query += " AND kh.cap_do = %s"
         params.append(level)
- 
+    
     if mode:
         query += " AND kh.hinh_thuc = %s"
         params.append(mode)
@@ -454,7 +454,7 @@ def course_detail(course_id):
         LIMIT 10
     """, (course_id,))
     reviews = cur.fetchall()
-
+    
     # Lấy thảo luận
     cur.execute(
         """
@@ -715,7 +715,7 @@ def process_payment(course_id):
         flash('Khóa học không tồn tại', 'danger')
         cur.close()
         return redirect(url_for('courses'))
-
+    
     # Kiểm tra đã đăng ký chưa
     cur.execute(
         "SELECT id, trang_thai FROM dang_ky_khoa_hoc WHERE user_id=%s AND khoa_hoc_id=%s",
@@ -730,7 +730,7 @@ def process_payment(course_id):
             return redirect(url_for('dashboard'))
         elif existing_enrollment['trang_thai'] == 'cancelled':
             # Cập nhật enrollment từ cancelled thành active
-            cur.execute("""
+    cur.execute("""
                 UPDATE dang_ky_khoa_hoc 
                 SET trang_thai = 'active', updated_at = CURRENT_TIMESTAMP
                 WHERE id = %s
@@ -765,7 +765,7 @@ def process_payment(course_id):
         )
 
     mysql.connection.commit()
-    cur.close()
+        cur.close()
     
     flash(f'Thanh toán thành công {amount:,.0f} VNĐ! Bạn đã được ghi danh vào khóa học.', 'success')
     return redirect(url_for('payment_success', course_id=course_id))
@@ -816,7 +816,7 @@ def buy_course(course_id):
             return jsonify({'success': False, 'message': 'Bạn đã đăng ký khóa học này rồi'}), 400
         # Nếu enrollment đã bị cancelled, cập nhật lại thành active
         elif existing_enrollment['trang_thai'] == 'cancelled':
-            cur.execute("""
+    cur.execute("""
                 UPDATE dang_ky_khoa_hoc 
                 SET trang_thai = 'active', updated_at = CURRENT_TIMESTAMP
                 WHERE id = %s
@@ -842,7 +842,7 @@ def buy_course(course_id):
     if not enrollment_updated:
         cur.execute(
             """
-            INSERT INTO dang_ky_khoa_hoc (user_id, khoa_hoc_id, trang_thai)
+        INSERT INTO dang_ky_khoa_hoc (user_id, khoa_hoc_id, trang_thai)
             VALUES (%s,%s,'active')
             """,
             (user_id, course_id),
@@ -951,28 +951,143 @@ def add_discussion(course_id):
 
 # ==================== CHỨC NĂNG NÂNG CAO 2: QUẢN LÝ BÀI TẬP ====================
 
-@app.route('/course/<int:course_id>/assignments/create', methods=['GET', 'POST'])
+@app.route('/teacher/assignments/<int:course_id>')
 @teacher_required
-def create_assignment(course_id):
+def teacher_assignments(course_id):
+    """Quản lý bài tập cho giáo viên"""
+    cur = mysql.connection.cursor()
+    
+    # Kiểm tra giáo viên sở hữu khóa
+    cur.execute("SELECT * FROM khoa_hoc WHERE id=%s AND teacher_id=%s", (course_id, session['user_id']))
+    course = cur.fetchone()
+    if not course:
+        cur.close()
+        flash('Bạn không có quyền với khóa học này', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    # Lấy danh sách bài tập
+    cur.execute("""
+        SELECT * FROM bai_tap 
+        WHERE khoa_hoc_id=%s 
+        ORDER BY created_at DESC
+    """, (course_id,))
+    assignments = cur.fetchall()
+    
+    # Lấy số lượng submissions cho mỗi bài tập
+    for assignment in assignments:
+        cur.execute("""
+            SELECT COUNT(*) as total, 
+                   COUNT(CASE WHEN trang_thai = 'graded' THEN 1 END) as graded_count
+            FROM nop_bai 
+            WHERE bai_tap_id = %s
+        """, (assignment['id'],))
+        stats = cur.fetchone()
+        assignment['submission_count'] = stats['total']
+        assignment['graded_count'] = stats['graded_count']
+    
+    cur.close()
+    return render_template('teacher/assignments.html', course=course, assignments=assignments)
+
+@app.route('/teacher/assignments/<int:course_id>/create', methods=['GET', 'POST'])
+@teacher_required
+def teacher_create_assignment(course_id):
     """Tạo bài tập mới (Giáo viên)"""
+    cur = mysql.connection.cursor()
+    
+    # Kiểm tra quyền
+    cur.execute("SELECT * FROM khoa_hoc WHERE id=%s AND teacher_id=%s", (course_id, session['user_id']))
+    course = cur.fetchone()
+    if not course:
+        cur.close()
+        flash('Bạn không có quyền với khóa học này', 'danger')
+        return redirect(url_for('dashboard'))
+    
     if request.method == 'POST':
         tieu_de = request.form.get('tieu_de')
         mo_ta = request.form.get('mo_ta', '')
-        noi_dung = request.form.get('noi_dung')
+        noi_dung = request.form.get('noi_dung', '')
         han_nop = request.form.get('han_nop') or None
+        is_required = 1 if request.form.get('is_required') == 'on' else 0
         
-        cur = mysql.connection.cursor()
         cur.execute("""
-            INSERT INTO bai_tap (khoa_hoc_id, tieu_de, mo_ta, noi_dung, han_nop)
-            VALUES (%s, %s, %s, %s, %s)
-        """, (course_id, tieu_de, mo_ta, noi_dung, han_nop))
+            INSERT INTO bai_tap (khoa_hoc_id, tieu_de, mo_ta, noi_dung, han_nop, is_required)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (course_id, tieu_de, mo_ta, noi_dung, han_nop, is_required))
         mysql.connection.commit()
         cur.close()
         
         flash('Tạo bài tập thành công!', 'success')
-        return redirect(url_for('assignments', course_id=course_id))
+        return redirect(url_for('teacher_assignments', course_id=course_id))
     
-    return render_template('teacher/create_assignment.html', course_id=course_id)
+    cur.close()
+    return render_template('teacher/create_assignment.html', course=course)
+
+@app.route('/teacher/assignments/<int:course_id>/<int:assignment_id>/submissions')
+@teacher_required
+def teacher_view_submissions(course_id, assignment_id):
+    """Xem danh sách bài nộp của học viên"""
+    cur = mysql.connection.cursor()
+    
+    # Kiểm tra quyền
+    cur.execute("SELECT * FROM khoa_hoc WHERE id=%s AND teacher_id=%s", (course_id, session['user_id']))
+    course = cur.fetchone()
+    if not course:
+        cur.close()
+        flash('Bạn không có quyền với khóa học này', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    # Lấy thông tin bài tập
+    cur.execute("SELECT * FROM bai_tap WHERE id=%s AND khoa_hoc_id=%s", (assignment_id, course_id))
+    assignment = cur.fetchone()
+    if not assignment:
+        cur.close()
+        flash('Không tìm thấy bài tập', 'danger')
+        return redirect(url_for('teacher_assignments', course_id=course_id))
+    
+    # Lấy danh sách submissions
+    cur.execute("""
+        SELECT nb.*, u.ho_ten, u.email
+        FROM nop_bai nb
+        JOIN users u ON nb.user_id = u.id
+        WHERE nb.bai_tap_id = %s
+        ORDER BY nb.created_at DESC
+    """, (assignment_id,))
+    submissions = cur.fetchall()
+    
+    cur.close()
+    return render_template('teacher/submissions.html', course=course, assignment=assignment, submissions=submissions)
+
+@app.route('/teacher/assignments/<int:course_id>/<int:assignment_id>/grade', methods=['POST'])
+@teacher_required
+def teacher_grade_submission(course_id, assignment_id):
+    """Chấm điểm bài tập"""
+    cur = mysql.connection.cursor()
+    
+    # Kiểm tra quyền
+    cur.execute("SELECT * FROM khoa_hoc WHERE id=%s AND teacher_id=%s", (course_id, session['user_id']))
+    course = cur.fetchone()
+    if not course:
+        cur.close()
+        flash('Bạn không có quyền với khóa học này', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    submission_id = request.form.get('submission_id')
+    diem_so = float(request.form.get('diem_so', 0))
+    nhan_xet = request.form.get('nhan_xet', '')
+    mark_done = request.form.get('mark_done') == 'on'
+    
+    # Cập nhật điểm và nhận xét
+    cur.execute("""
+        UPDATE nop_bai 
+        SET diem_so = %s, nhan_xet = %s, trang_thai = %s
+        WHERE id = %s
+    """, (diem_so, nhan_xet, 'graded' if mark_done else 'graded', submission_id))
+    
+    mysql.connection.commit()
+    cur.close()
+    
+    flash('Chấm điểm thành công!', 'success')
+    return redirect(url_for('teacher_view_submissions', course_id=course_id, assignment_id=assignment_id))
 
 # ==================== QUẢN LÝ LỊCH HỌC ====================
 
