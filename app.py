@@ -117,7 +117,13 @@ def compute_progress(cur, course_id, user_id):
     )
     present_count = cur.fetchone()["present_count"]
 
-    attendance_ratio = present_count / total_sessions if total_sessions else 1
+    # Tính tỷ lệ điểm danh: chỉ tính nếu có buổi học
+    if total_sessions > 0:
+        attendance_ratio = present_count / total_sessions
+        attendance_met = attendance_ratio >= 0.7
+    else:
+        attendance_ratio = 0.0
+        attendance_met = True  # Không có buổi học thì không yêu cầu điểm danh
 
     cur.execute("SELECT COUNT(*) AS total_req FROM bai_tap WHERE khoa_hoc_id=%s AND is_required=1", (course_id,))
     total_req = cur.fetchone()["total_req"]
@@ -131,10 +137,28 @@ def compute_progress(cur, course_id, user_id):
         (course_id, user_id),
     )
     submitted_req = cur.fetchone()["submitted_req"]
-    assignment_ratio = submitted_req / total_req if total_req else 1
+    
+    # Tính tỷ lệ bài tập: chỉ tính nếu có bài tập bắt buộc
+    if total_req > 0:
+        assignment_ratio = submitted_req / total_req
+        assignment_met = submitted_req == total_req
+    else:
+        assignment_ratio = 0.0
+        assignment_met = True  # Không có bài tập bắt buộc thì không yêu cầu nộp bài
 
-    progress_ratio = (attendance_ratio + assignment_ratio) / 2 if (total_sessions or total_req) else 1
-    completed = attendance_ratio >= 0.7 and (total_req == 0 or submitted_req == total_req)
+    # Tính tỷ lệ tiến độ tổng
+    if total_sessions > 0 and total_req > 0:
+        progress_ratio = (attendance_ratio + assignment_ratio) / 2
+    elif total_sessions > 0:
+        progress_ratio = attendance_ratio
+    elif total_req > 0:
+        progress_ratio = assignment_ratio
+    else:
+        progress_ratio = 0.0  # Không có buổi học và bài tập thì tiến độ = 0
+
+    # Hoàn thành khi: đạt yêu cầu điểm danh VÀ đạt yêu cầu bài tập
+    # Và phải có ít nhất một trong hai (buổi học hoặc bài tập)
+    completed = attendance_met and assignment_met and (total_sessions > 0 or total_req > 0)
 
     return {
         "attendance_ratio": attendance_ratio,
@@ -368,13 +392,16 @@ def student_learn(course_id):
     
     # Lấy điểm danh của học viên
     cur.execute("""
-        SELECT dd.*, lh.ngay_hoc, lh.gio_bat_dau
+        SELECT dd.*, lh.ngay_hoc, lh.gio_bat_dau, lh.id as lich_hoc_id
         FROM diem_danh dd
         JOIN lich_hoc lh ON dd.lich_hoc_id = lh.id
         WHERE lh.khoa_hoc_id = %s AND dd.user_id = %s
         ORDER BY lh.ngay_hoc DESC
     """, (course_id, user_id))
     attendance_records = cur.fetchall()
+    
+    # Lấy ngày hôm nay để so sánh
+    today = datetime.now().date()
     
     cur.close()
     
@@ -386,7 +413,8 @@ def student_learn(course_id):
                          assignments=assignments,
                          discussions=discussions,
                          progress=progress,
-                         attendance_records=attendance_records)
+                         attendance_records=attendance_records,
+                         today=today)
 
 @app.route('/course/<int:course_id>')
 def course_detail(course_id):

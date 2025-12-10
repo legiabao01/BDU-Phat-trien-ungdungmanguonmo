@@ -3,241 +3,771 @@
 {% block title %}Học tập - {{ course.tieu_de }}{% endblock %}
 
 {% block content %}
-<div class="container my-5">
-    <div class="row">
-        <!-- Sidebar -->
-        <div class="col-md-3 mb-4">
-            <div class="card-soft sticky-top" style="top: 100px;">
-                <h5 class="mb-3"><i class="bi bi-book text-brand-sky"></i> {{ course.tieu_de }}</h5>
-                
-                <!-- Tiến độ -->
-                <div class="mb-3">
-                    <div class="d-flex justify-content-between mb-1">
-                        <small class="text-muted">Tiến độ</small>
-                        <small class="text-muted"><strong>{{ "%.0f"|format(progress.progress_ratio*100) }}%</strong></small>
-                    </div>
-                    <div class="progress" style="height: 8px;">
-                        <div class="progress-bar bg-success" style="width: {{ "%.0f"|format(progress.progress_ratio*100) }}%;"></div>
-                    </div>
+<div class="container-fluid my-4">
+    <!-- Header với tiến độ -->
+    <div class="card-soft mb-4">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="title-gradient mb-2">{{ course.tieu_de }}</h1>
+                <p class="text-muted mb-3">{{ course.mo_ta or 'Không có mô tả' }}</p>
+                <div class="d-flex gap-2 flex-wrap">
+                    <span class="badge-custom badge-info">
+                        <i class="bi bi-star"></i> {{ course.cap_do or 'N/A' }}
+                    </span>
+                    <span class="badge-custom badge-success">
+                        <i class="bi bi-laptop"></i> {{ course.hinh_thuc or 'online' }}
+                    </span>
+                    <span class="badge-custom badge-primary">
+                        <i class="bi bi-calendar-check"></i> {{ course.so_buoi or 0 }} buổi học
+                    </span>
                 </div>
-                
-                <!-- Thông tin giáo viên -->
-                {% if teacher %}
-                <div class="border-top pt-3 mb-3">
-                    <h6 class="mb-2"><i class="bi bi-person-badge"></i> Giáo viên</h6>
-                    <p class="mb-1"><strong>{{ teacher.ho_ten }}</strong></p>
-                    <p class="small text-muted mb-1">
-                        <i class="bi bi-envelope"></i> {{ teacher.email }}
-                    </p>
-                    {% if teacher.so_dien_thoai %}
-                    <p class="small text-muted mb-0">
-                        <i class="bi bi-telephone"></i> {{ teacher.so_dien_thoai }}
-                    </p>
-                    {% endif %}
-                </div>
-                {% endif %}
-                
-                <!-- Navigation -->
-                <div class="border-top pt-3">
-                    <a href="#content" class="d-block mb-2 text-decoration-none text-brand-sky">
-                        <i class="bi bi-list-ul"></i> Nội dung khóa học
-                    </a>
-                    <a href="#schedule" class="d-block mb-2 text-decoration-none text-brand-sky">
-                        <i class="bi bi-calendar"></i> Lịch học
-                    </a>
-                    <a href="#assignments" class="d-block mb-2 text-decoration-none text-brand-sky">
-                        <i class="bi bi-file-earmark-text"></i> Bài tập
-                    </a>
-                    <a href="#discussion" class="d-block text-decoration-none text-brand-sky">
-                        <i class="bi bi-chat-dots"></i> Thảo luận
-                    </a>
+            </div>
+            <div class="col-md-4 text-end">
+                <div class="card border-0 bg-light p-3">
+                    <h6 class="text-muted mb-2">Tiến độ học tập</h6>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="h4 mb-0 text-brand-green">{{ "%.0f"|format(progress.progress_ratio*100) }}%</span>
+                        {% if progress.completed %}
+                        <span class="badge bg-success">
+                            <i class="bi bi-check-circle"></i> Hoàn thành
+                        </span>
+                        {% endif %}
+                    </div>
+                    <div class="progress" style="height: 10px;">
+                        <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" 
+                             style="width: {{ "%.0f"|format(progress.progress_ratio*100) }}%;"></div>
+                    </div>
+                    <div class="row mt-2 text-center">
+                        <div class="col-6">
+                            <small class="text-muted d-block">Điểm danh</small>
+                            <strong>{{ progress.present_count }}/{{ progress.total_sessions }}</strong>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted d-block">Bài tập</small>
+                            <strong>{{ progress.submitted_required_assign }}/{{ progress.total_required_assign }}</strong>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-        
-        <!-- Main Content -->
-        <div class="col-md-9">
-            <!-- Header -->
-            <div class="card-soft mb-4">
-                <h2 class="title-gradient mb-3">{{ course.tieu_de }}</h2>
-                <p class="text-muted">{{ course.mo_ta or 'Không có mô tả' }}</p>
-                <div class="d-flex gap-2 mb-3">
-                    <span class="badge-custom badge-info">{{ course.cap_do or 'N/A' }}</span>
-                    <span class="badge-custom badge-success">{{ course.hinh_thuc or 'online' }}</span>
+    </div>
+
+    <div class="row">
+        <!-- Sidebar Navigation -->
+        <div class="col-lg-3 mb-4">
+            <div class="card-soft sticky-top" style="top: 20px;">
+                <!-- Thông tin giáo viên -->
+                {% if teacher %}
+                <div class="mb-4 pb-3 border-bottom">
+                    <h6 class="text-muted mb-2">
+                        <i class="bi bi-person-badge text-brand-sky"></i> Giáo viên
+                    </h6>
+                    <div class="d-flex align-items-center">
+                        <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center me-2" 
+                             style="width: 40px; height: 40px;">
+                            <span class="text-white fw-bold">{{ teacher.ho_ten[0] }}</span>
+                        </div>
+                        <div>
+                            <strong class="d-block">{{ teacher.ho_ten }}</strong>
+                            <small class="text-muted">
+                                <i class="bi bi-envelope"></i> {{ teacher.email }}
+                            </small>
+                        </div>
+                    </div>
+                    {% if teacher.so_dien_thoai %}
+                    <small class="text-muted d-block mt-2">
+                        <i class="bi bi-telephone"></i> {{ teacher.so_dien_thoai }}
+                    </small>
+                    {% endif %}
                 </div>
+                {% endif %}
+
+                <!-- Navigation Menu -->
+                <nav class="nav flex-column">
+                    <a class="nav-link active" href="#overview" onclick="showSection('overview')">
+                        <i class="bi bi-house-door"></i> Tổng quan
+                    </a>
+                    <a class="nav-link" href="#curriculum" onclick="showSection('curriculum')">
+                        <i class="bi bi-book"></i> Chương trình học
+                    </a>
+                    <a class="nav-link" href="#schedule" onclick="showSection('schedule')">
+                        <i class="bi bi-calendar-event"></i> Lịch học
+                    </a>
+                    <a class="nav-link" href="#assignments" onclick="showSection('assignments')">
+                        <i class="bi bi-file-earmark-check"></i> Bài tập
+                    </a>
+                    <a class="nav-link" href="#discussion" onclick="showSection('discussion')">
+                        <i class="bi bi-chat-left-text"></i> Thảo luận
+                    </a>
+                </nav>
             </div>
-            
-            <!-- Nội dung khóa học -->
-            <div id="content" class="card-soft mb-4">
-                <h4 class="title-gradient mb-3"><i class="bi bi-list-ul"></i> Nội dung khóa học</h4>
-                {% if course_content %}
-                <div class="list-group">
-                    {% for item in course_content %}
-                    <div class="list-group-item border-0 shadow-sm mb-2 rounded">
-                        <div class="d-flex align-items-start">
-                            <div class="me-3">
-                                <span class="badge-custom badge-info">{{ item.thu_tu }}</span>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-lg-9">
+            <!-- Section: Tổng quan -->
+            <div id="overview" class="content-section">
+                <div class="card-soft mb-4">
+                    <h3 class="title-gradient mb-4">
+                        <i class="bi bi-house-door"></i> Tổng quan khóa học
+                    </h3>
+                    
+                    <div class="row">
+                        <div class="col-md-4 mb-4">
+                            <div class="card border h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">
+                                        <i class="bi bi-graph-up text-success"></i> Tiến độ học tập
+                                    </h5>
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span>Điểm danh</span>
+                                            <span><strong>{{ progress.present_count }}/{{ progress.total_sessions }}</strong></span>
+                                        </div>
+                                        <div class="progress">
+                                            <div class="progress-bar bg-info" 
+                                                 style="width: {{ "%.0f"|format(progress.attendance_ratio*100) }}%;">
+                                                {{ "%.0f"|format(progress.attendance_ratio*100) }}%
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span>Bài tập bắt buộc</span>
+                                            <span><strong>{{ progress.submitted_required_assign }}/{{ progress.total_required_assign }}</strong></span>
+                                        </div>
+                                        <div class="progress">
+                                            <div class="progress-bar bg-warning" 
+                                                 style="width: {{ "%.0f"|format(progress.assignment_ratio*100) if progress.total_required_assign > 0 else 0 }}%;">
+                                                {% if progress.total_required_assign > 0 %}
+                                                {{ "%.0f"|format(progress.assignment_ratio*100) }}%
+                                                {% else %}
+                                                0%
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="flex-grow-1">
-                                <h6 class="mb-2"><i class="bi bi-check-circle text-brand-green me-2"></i>{{ item.tieu_de_muc }}</h6>
-                                {% if item.noi_dung %}
-                                <p class="mb-0 text-muted small">{{ item.noi_dung }}</p>
-                                {% endif %}
-                                {% if item.hinh_anh %}
-                                <img src="{{ item.hinh_anh }}" class="img-fluid rounded mt-2" style="max-height: 200px;">
-                                {% endif %}
+                        </div>
+                        
+                        <div class="col-md-4 mb-4">
+                            <div class="card border h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">
+                                        <i class="bi bi-info-circle text-primary"></i> Thông tin khóa học
+                                    </h5>
+                                    <ul class="list-unstyled mb-0">
+                                        <li class="mb-2">
+                                            <i class="bi bi-calendar3 text-muted"></i> 
+                                            <strong>Số buổi:</strong> {{ course.so_buoi or 'N/A' }}
+                                        </li>
+                                        <li class="mb-2">
+                                            <i class="bi bi-clock text-muted"></i> 
+                                            <strong>Thời lượng:</strong> {{ course.thoi_luong or 'N/A' }}
+                                        </li>
+                                        <li class="mb-2">
+                                            <i class="bi bi-laptop text-muted"></i> 
+                                            <strong>Hình thức:</strong> {{ course.hinh_thuc or 'online' }}
+                                        </li>
+                                        <li class="mb-0">
+                                            <i class="bi bi-star text-muted"></i> 
+                                            <strong>Cấp độ:</strong> {{ course.cap_do or 'N/A' }}
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Thông tin liên hệ giảng viên -->
+                        <div class="col-md-4 mb-4">
+                            <div class="card border-primary h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title text-primary">
+                                        <i class="bi bi-person-badge"></i> Liên hệ giảng viên
+                                    </h5>
+                                    {% if teacher %}
+                                    <div class="text-center mb-3">
+                                        <div class="bg-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-2" 
+                                             style="width: 60px; height: 60px;">
+                                            <span class="text-white fw-bold fs-4">{{ teacher.ho_ten[0] }}</span>
+                                        </div>
+                                        <h6 class="mb-1">{{ teacher.ho_ten }}</h6>
+                                    </div>
+                                    <div class="list-group list-group-flush">
+                                        <div class="list-group-item px-0 border-0">
+                                            <i class="bi bi-envelope text-primary me-2"></i>
+                                            <a href="mailto:{{ teacher.email }}" class="text-decoration-none">
+                                                {{ teacher.email }}
+                                            </a>
+                                        </div>
+                                        {% if teacher.so_dien_thoai %}
+                                        <div class="list-group-item px-0 border-0">
+                                            <i class="bi bi-telephone text-primary me-2"></i>
+                                            <a href="tel:{{ teacher.so_dien_thoai }}" class="text-decoration-none">
+                                                {{ teacher.so_dien_thoai }}
+                                            </a>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="mt-3">
+                                        <a href="#discussion" onclick="showSection('discussion')" class="btn btn-primary w-100">
+                                            <i class="bi bi-chat-dots"></i> Nhắn tin cho giáo viên
+                                        </a>
+                                    </div>
+                                    {% else %}
+                                    <p class="text-muted mb-0">Chưa có thông tin giáo viên</p>
+                                    {% endif %}
+                                </div>
                             </div>
                         </div>
                     </div>
-                    {% endfor %}
                 </div>
-                {% else %}
-                <p class="text-muted">Chưa có nội dung khóa học.</p>
-                {% endif %}
             </div>
-            
-            <!-- Lịch học -->
-            <div id="schedule" class="card-soft mb-4">
-                <h4 class="title-gradient mb-3"><i class="bi bi-calendar"></i> Lịch học</h4>
-                {% if schedule %}
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>Ngày học</th>
-                                <th>Giờ</th>
-                                <th>Phòng/Link</th>
-                                <th>Điểm danh</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for s in schedule %}
-                            <tr>
-                                <td>{{ s.ngay_hoc.strftime('%d/%m/%Y') if s.ngay_hoc else 'N/A' }}</td>
-                                <td>{{ s.gio_bat_dau }} - {{ s.gio_ket_thuc }}</td>
-                                <td>
-                                    {% if s.link_zoom %}
-                                    <a href="{{ s.link_zoom }}" target="_blank" class="text-brand-sky">
-                                        <i class="bi bi-camera-video"></i> Zoom
-                                    </a>
-                                    {% elif s.phong %}
-                                    <span>{{ s.phong }}</span>
-                                    {% else %}
-                                    <span class="text-muted">Chưa cập nhật</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% set found = False %}
-                                    {% for att in attendance_records %}
-                                        {% if att.lich_hoc_id == s.id %}
-                                            {% set found = True %}
-                                            <span class="badge-custom badge-{{ 'success' if att.status == 'present' else 'warning' if att.status == 'late' else 'danger' }}">
-                                                {{ 'Có mặt' if att.status == 'present' else 'Muộn' if att.status == 'late' else 'Vắng' }}
-                                            </span>
+
+            <!-- Section: Chương trình học / Bài giảng -->
+            <div id="curriculum" class="content-section" style="display: none;">
+                <div class="card-soft mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h3 class="title-gradient mb-0">
+                            <i class="bi bi-book"></i> Chương trình học / Bài giảng
+                        </h3>
+                        <span class="badge bg-primary">
+                            Tổng: {{ course_content|length }} bài học
+                        </span>
+                    </div>
+                    
+                    {% if course_content %}
+                    <div class="timeline">
+                        {% for item in course_content %}
+                        <div class="timeline-item mb-4">
+                            <div class="card border-0 shadow-sm hover-shadow">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-start">
+                                        <div class="timeline-marker me-3">
+                                            <div class="timeline-number">{{ item.thu_tu }}</div>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <h5 class="mb-0">
+                                                    <i class="bi bi-play-circle-fill text-brand-green me-2"></i>
+                                                    {{ item.tieu_de_muc }}
+                                                </h5>
+                                                <span class="badge bg-light text-dark">
+                                                    Bài {{ item.thu_tu }}
+                                                </span>
+                                            </div>
+                                            {% if item.noi_dung %}
+                                            <div class="lesson-content mb-3">
+                                                <p class="text-muted mb-2">{{ item.noi_dung }}</p>
+                                            </div>
+                                            {% endif %}
+                                            {% if item.hinh_anh %}
+                                            <div class="mb-3">
+                                                <img src="{{ item.hinh_anh }}" class="img-fluid rounded shadow-sm" 
+                                                     style="max-height: 400px; width: auto; cursor: pointer;"
+                                                     onclick="openImageModal(this.src)">
+                                            </div>
+                                            {% endif %}
+                                            <div class="d-flex gap-2">
+                                                <button class="btn btn-sm btn-outline-primary" onclick="markAsCompleted({{ item.id }})">
+                                                    <i class="bi bi-check-circle"></i> Đánh dấu đã học
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-info" onclick="scrollToDiscussion()">
+                                                    <i class="bi bi-chat-dots"></i> Hỏi về bài này
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> Chưa có nội dung khóa học. Vui lòng liên hệ giáo viên.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Section: Lịch học -->
+            <div id="schedule" class="content-section" style="display: none;">
+                <div class="card-soft mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h3 class="title-gradient mb-0">
+                            <i class="bi bi-calendar-event"></i> Lịch học
+                        </h3>
+                        {% if schedule %}
+                        <div>
+                            <span class="badge bg-info me-2">
+                                Tổng: {{ schedule|length }} buổi học
+                            </span>
+                            {% set upcoming_count = schedule|selectattr('ngay_hoc', 'ge', today)|list|length %}
+                            {% if upcoming_count > 0 %}
+                            <span class="badge bg-warning">
+                                Sắp tới: {{ upcoming_count }} buổi
+                            </span>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    {% if schedule %}
+                    <!-- Calendar View -->
+                    <div class="row mb-4">
+                        <div class="col-md-12">
+                            <div class="card border-primary">
+                                <div class="card-header bg-primary text-white">
+                                    <h5 class="mb-0">
+                                        <i class="bi bi-calendar3"></i> Lịch học sắp tới
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    {% for s in schedule %}
+                                        {% if s.ngay_hoc and s.ngay_hoc >= today %}
+                                        <div class="d-flex align-items-center mb-3 pb-3 border-bottom">
+                                            <div class="text-center me-3" style="min-width: 80px;">
+                                                <div class="badge bg-primary fs-6 mb-1">
+                                                    {{ s.ngay_hoc.strftime('%d/%m') if s.ngay_hoc else '' }}
+                                                </div>
+                                                <small class="text-muted d-block">
+                                                    {{ s.ngay_hoc.strftime('%A')[:3] if s.ngay_hoc else '' }}
+                                                </small>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <h6 class="mb-1">
+                                                    <i class="bi bi-clock text-primary"></i>
+                                                    {{ s.gio_bat_dau }} - {{ s.gio_ket_thuc }}
+                                                </h6>
+                                                {% if s.link_zoom %}
+                                                <a href="{{ s.link_zoom }}" target="_blank" class="btn btn-sm btn-success">
+                                                    <i class="bi bi-camera-video"></i> Tham gia Zoom ngay
+                                                </a>
+                                                {% elif s.phong %}
+                                                <span class="badge bg-secondary">
+                                                    <i class="bi bi-building"></i> Phòng: {{ s.phong }}
+                                                </span>
+                                                {% endif %}
+                                            </div>
+                                            <div>
+                                                {% if s.ngay_hoc == today %}
+                                                <span class="badge bg-warning fs-6">
+                                                    <i class="bi bi-star-fill"></i> Hôm nay
+                                                </span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
                                         {% endif %}
                                     {% endfor %}
-                                    {% if not found %}
-                                    <span class="text-muted small">Chưa điểm danh</span>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Detailed Table -->
+                    <h5 class="mb-3">
+                        <i class="bi bi-list-ul"></i> Chi tiết lịch học
+                    </h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 5%;">#</th>
+                                    <th style="width: 20%;">Ngày học</th>
+                                    <th style="width: 15%;">Giờ học</th>
+                                    <th style="width: 25%;">Phòng/Link</th>
+                                    <th style="width: 15%;">Trạng thái</th>
+                                    <th style="width: 20%;">Điểm danh</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for s in schedule %}
+                                <tr class="{% if s.ngay_hoc == today %}table-warning{% endif %}">
+                                    <td><strong>{{ loop.index }}</strong></td>
+                                    <td>
+                                        <strong>{{ s.ngay_hoc.strftime('%d/%m/%Y') if s.ngay_hoc else 'N/A' }}</strong>
+                                        <br>
+                                        <small class="text-muted">
+                                            {% if s.ngay_hoc %}
+                                                {% set weekday = s.ngay_hoc.strftime('%A') %}
+                                                {% if weekday == 'Monday' %}Thứ 2
+                                                {% elif weekday == 'Tuesday' %}Thứ 3
+                                                {% elif weekday == 'Wednesday' %}Thứ 4
+                                                {% elif weekday == 'Thursday' %}Thứ 5
+                                                {% elif weekday == 'Friday' %}Thứ 6
+                                                {% elif weekday == 'Saturday' %}Thứ 7
+                                                {% elif weekday == 'Sunday' %}Chủ nhật
+                                                {% else %}{{ weekday }}
+                                                {% endif %}
+                                            {% endif %}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <i class="bi bi-clock text-primary"></i> 
+                                        <strong>{{ s.gio_bat_dau }} - {{ s.gio_ket_thuc }}</strong>
+                                    </td>
+                                    <td>
+                                        {% if s.link_zoom %}
+                                        <a href="{{ s.link_zoom }}" target="_blank" class="btn btn-sm btn-primary">
+                                            <i class="bi bi-camera-video"></i> Tham gia Zoom
+                                        </a>
+                                        {% elif s.phong %}
+                                        <div>
+                                            <span class="badge bg-secondary">
+                                                <i class="bi bi-building"></i> {{ s.phong }}
+                                            </span>
+                                        </div>
+                                        {% else %}
+                                        <span class="text-muted">
+                                            <i class="bi bi-dash-circle"></i> Chưa cập nhật
+                                        </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if s.ngay_hoc %}
+                                            {% if s.ngay_hoc < today %}
+                                                <span class="badge bg-secondary">
+                                                    <i class="bi bi-check-circle"></i> Đã qua
+                                                </span>
+                                            {% elif s.ngay_hoc == today %}
+                                                <span class="badge bg-warning">
+                                                    <i class="bi bi-star-fill"></i> Hôm nay
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-info">
+                                                    <i class="bi bi-calendar-event"></i> Sắp tới
+                                                </span>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="badge bg-secondary">Chưa xác định</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% set found = False %}
+                                        {% for att in attendance_records %}
+                                            {% if att.lich_hoc_id == s.id %}
+                                                {% set found = True %}
+                                                <span class="badge bg-{{ 'success' if att.status == 'present' else 'warning' if att.status == 'late' else 'danger' }}">
+                                                    {% if att.status == 'present' %}
+                                                        <i class="bi bi-check-circle"></i> Có mặt
+                                                    {% elif att.status == 'late' %}
+                                                        <i class="bi bi-clock"></i> Muộn
+                                                    {% else %}
+                                                        <i class="bi bi-x-circle"></i> Vắng
+                                                    {% endif %}
+                                                </span>
+                                            {% endif %}
+                                        {% endfor %}
+                                        {% if not found %}
+                                        <span class="text-muted small">
+                                            <i class="bi bi-dash"></i> Chưa điểm danh
+                                        </span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> Chưa có lịch học. Vui lòng liên hệ giáo viên.
+                    </div>
+                    {% endif %}
                 </div>
-                {% else %}
-                <p class="text-muted">Chưa có lịch học.</p>
-                {% endif %}
             </div>
-            
-            <!-- Bài tập -->
-            <div id="assignments" class="card-soft mb-4">
-                <h4 class="title-gradient mb-3"><i class="bi bi-file-earmark-text"></i> Bài tập</h4>
-                {% if assignments %}
-                <div class="list-group">
-                    {% for assignment in assignments %}
-                    <div class="list-group-item border-0 shadow-sm mb-2 rounded">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div class="flex-grow-1">
-                                <h6 class="mb-2">
-                                    {{ assignment.tieu_de }}
-                                    {% if assignment.is_required %}
-                                    <span class="badge-custom badge-danger small">Bắt buộc</span>
+
+            <!-- Section: Bài tập -->
+            <div id="assignments" class="content-section" style="display: none;">
+                <div class="card-soft mb-4">
+                    <h3 class="title-gradient mb-4">
+                        <i class="bi bi-file-earmark-check"></i> Bài tập
+                    </h3>
+                    
+                    {% if assignments %}
+                    <div class="row">
+                        {% for assignment in assignments %}
+                        <div class="col-md-6 mb-3">
+                            <div class="card border h-100 {% if assignment.has_submitted %}border-success{% endif %}">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h5 class="card-title mb-0">
+                                            <i class="bi bi-file-earmark-text text-primary"></i>
+                                            {{ assignment.tieu_de }}
+                                        </h5>
+                                        {% if assignment.is_required %}
+                                        <span class="badge bg-danger">
+                                            <i class="bi bi-exclamation-triangle"></i> Bắt buộc
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    {% if assignment.mo_ta %}
+                                    <p class="text-muted small mb-2">{{ assignment.mo_ta }}</p>
                                     {% endif %}
-                                </h6>
-                                {% if assignment.mo_ta %}
-                                <p class="small text-muted mb-2">{{ assignment.mo_ta }}</p>
-                                {% endif %}
-                                {% if assignment.han_nop %}
-                                <small class="text-muted">
-                                    <i class="bi bi-clock"></i> Hạn nộp: {{ assignment.han_nop.strftime('%d/%m/%Y %H:%M') }}
-                                </small>
-                                {% endif %}
-                            </div>
-                            <div>
-                                {% if assignment.has_submitted %}
-                                <span class="badge-custom badge-success">Đã nộp</span>
-                                {% else %}
-                                <span class="badge-custom badge-warning">Chưa nộp</span>
-                                {% endif %}
+                                    
+                                    {% if assignment.han_nop %}
+                                    <p class="mb-2">
+                                        <small class="text-muted">
+                                            <i class="bi bi-clock"></i> Hạn nộp: 
+                                            <strong>{{ assignment.han_nop.strftime('%d/%m/%Y %H:%M') }}</strong>
+                                        </small>
+                                    </p>
+                                    {% endif %}
+                                    
+                                    <div class="d-flex justify-content-between align-items-center mt-3">
+                                        <div>
+                                            {% if assignment.has_submitted %}
+                                            <span class="badge bg-success">
+                                                <i class="bi bi-check-circle"></i> Đã nộp
+                                            </span>
+                                            {% else %}
+                                            <span class="badge bg-warning">
+                                                <i class="bi bi-exclamation-circle"></i> Chưa nộp
+                                            </span>
+                                            {% endif %}
+                                        </div>
+                                        <div>
+                                            <a href="{{ url_for('submit_assignment', assignment_id=assignment.id) }}" 
+                                               class="btn btn-sm btn-primary">
+                                                <i class="bi bi-upload"></i> Nộp bài
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div class="mt-2">
-                            <a href="{{ url_for('submit_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-primary-custom">
-                                <i class="bi bi-upload"></i> Nộp bài
-                            </a>
-                            <a href="{{ url_for('assignments', course_id=course.id) }}" class="btn btn-sm btn-outline-custom">
-                                <i class="bi bi-eye"></i> Xem chi tiết
-                            </a>
-                        </div>
+                        {% endfor %}
                     </div>
-                    {% endfor %}
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> Chưa có bài tập nào. Vui lòng đợi giáo viên giao bài.
+                    </div>
+                    {% endif %}
                 </div>
-                {% else %}
-                <p class="text-muted">Chưa có bài tập nào.</p>
-                {% endif %}
             </div>
-            
-            <!-- Thảo luận -->
-            <div id="discussion" class="card-soft">
-                <h4 class="title-gradient mb-3"><i class="bi bi-chat-dots"></i> Thảo luận với giáo viên</h4>
-                
-                <!-- Form thảo luận -->
-                <form method="POST" action="{{ url_for('add_discussion', course_id=course.id) }}" class="mb-4">
-                    <div class="mb-2">
-                        <textarea class="form-control" name="noi_dung" rows="3" placeholder="Đặt câu hỏi hoặc chia sẻ ý kiến..." required></textarea>
+
+            <!-- Section: Thảo luận -->
+            <div id="discussion" class="content-section" style="display: none;">
+                <div class="card-soft mb-4">
+                    <h3 class="title-gradient mb-4">
+                        <i class="bi bi-chat-left-text"></i> Thảo luận với giáo viên
+                    </h3>
+                    
+                    <!-- Form thảo luận -->
+                    <div class="card border mb-4">
+                        <div class="card-body">
+                            <form method="POST" action="{{ url_for('add_discussion', course_id=course.id) }}">
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        <i class="bi bi-chat-dots"></i> Đặt câu hỏi hoặc chia sẻ ý kiến
+                                    </label>
+                                    <textarea class="form-control" name="noi_dung" rows="4" 
+                                              placeholder="Nhập câu hỏi hoặc bình luận của bạn..." required></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary-custom">
+                                    <i class="bi bi-send"></i> Gửi thảo luận
+                                </button>
+                            </form>
+                        </div>
                     </div>
-                    <button type="submit" class="btn btn-primary-custom">
-                        <i class="bi bi-send"></i> Gửi
-                    </button>
-                </form>
-                
-                <!-- Danh sách thảo luận -->
-                {% if discussions %}
-                <div class="border-top pt-3">
-                    {% for d in discussions %}
-                    <div class="mb-3 pb-3 border-bottom">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <div>
-                                <strong class="text-brand-sky">
-                                    {{ d.ho_ten }}
-                                    {% if d.role == 'teacher' %}
-                                    <span class="badge-custom badge-success small">Giáo viên</span>
-                                    {% endif %}
-                                </strong>
-                                <small class="text-muted ms-2">{{ d.created_at.strftime('%d/%m/%Y %H:%M') }}</small>
+                    
+                    <!-- Danh sách thảo luận -->
+                    {% if discussions %}
+                    <div class="discussion-list">
+                        {% for d in discussions %}
+                        <div class="card border-0 shadow-sm mb-3">
+                            <div class="card-body">
+                                <div class="d-flex align-items-start">
+                                    <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center me-3" 
+                                         style="width: 40px; height: 40px; min-width: 40px;">
+                                        <span class="text-white fw-bold">{{ d.ho_ten[0] }}</span>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <div>
+                                                <strong class="text-brand-sky">
+                                                    {{ d.ho_ten }}
+                                                    {% if d.role == 'teacher' %}
+                                                    <span class="badge bg-success ms-2">
+                                                        <i class="bi bi-person-badge"></i> Giáo viên
+                                                    </span>
+                                                    {% endif %}
+                                                </strong>
+                                                <small class="text-muted ms-2">
+                                                    <i class="bi bi-clock"></i> {{ d.created_at.strftime('%d/%m/%Y %H:%M') }}
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <p class="mb-0">{{ d.noi_dung }}</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <p class="mb-0">{{ d.noi_dung }}</p>
+                        {% endfor %}
                     </div>
-                    {% endfor %}
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> Chưa có thảo luận nào. Hãy bắt đầu cuộc trò chuyện!
+                    </div>
+                    {% endif %}
                 </div>
-                {% else %}
-                <p class="text-muted">Chưa có thảo luận nào. Hãy bắt đầu cuộc trò chuyện!</p>
-                {% endif %}
             </div>
         </div>
     </div>
 </div>
-{% endblock %}
 
+<style>
+.timeline {
+    position: relative;
+    padding-left: 30px;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #e0e0e0;
+}
+
+.timeline-item {
+    position: relative;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -45px;
+    top: 0;
+}
+
+.timeline-number {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #0d6efd;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.nav-link {
+    color: #666;
+    padding: 10px 15px;
+    border-radius: 5px;
+    margin-bottom: 5px;
+    transition: all 0.3s;
+}
+
+.nav-link:hover {
+    background-color: #f0f0f0;
+    color: #0d6efd;
+}
+
+.nav-link.active {
+    background-color: #0d6efd;
+    color: white;
+}
+
+.content-section {
+    animation: fadeIn 0.3s;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.hover-shadow {
+    transition: all 0.3s;
+}
+
+.hover-shadow:hover {
+    box-shadow: 0 8px 16px rgba(0,0,0,0.15) !important;
+    transform: translateY(-2px);
+}
+
+/* Image Modal */
+.image-modal {
+    display: none;
+    position: fixed;
+    z-index: 9999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.9);
+    cursor: pointer;
+}
+
+.image-modal img {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    max-width: 90%;
+    max-height: 90%;
+}
+</style>
+
+<!-- Image Modal -->
+<div id="imageModal" class="image-modal" onclick="closeImageModal()">
+    <img id="modalImage" src="" alt="Bài giảng">
+</div>
+
+<script>
+function showSection(sectionId) {
+    // Hide all sections
+    document.querySelectorAll('.content-section').forEach(section => {
+        section.style.display = 'none';
+    });
+    
+    // Show selected section
+    document.getElementById(sectionId).style.display = 'block';
+    
+    // Update nav links
+    document.querySelectorAll('.nav-link').forEach(link => {
+        link.classList.remove('active');
+    });
+    event.target.classList.add('active');
+    
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Show overview by default
+document.addEventListener('DOMContentLoaded', function() {
+    showSection('overview');
+});
+
+// Image modal functions
+function openImageModal(src) {
+    document.getElementById('modalImage').src = src;
+    document.getElementById('imageModal').style.display = 'block';
+}
+
+function closeImageModal() {
+    document.getElementById('imageModal').style.display = 'none';
+}
+
+// Mark lesson as completed (placeholder)
+function markAsCompleted(lessonId) {
+    // TODO: Implement API call to mark lesson as completed
+    alert('Tính năng đánh dấu đã học sẽ được cập nhật sớm!');
+}
+
+function scrollToDiscussion() {
+    showSection('discussion');
+    setTimeout(() => {
+        document.getElementById('discussion').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+}
+</script>
+{% endblock %}
