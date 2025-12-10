@@ -337,19 +337,34 @@
                                                 </small>
                                             </div>
                                             <div class="flex-grow-1">
-                                                <h6 class="mb-1">
+                                                <h6 class="mb-2">
                                                     <i class="bi bi-clock text-primary"></i>
                                                     {{ s.gio_bat_dau }} - {{ s.gio_ket_thuc }}
                                                 </h6>
-                                                {% if s.link_zoom %}
-                                                <a href="{{ s.link_zoom }}" target="_blank" class="btn btn-sm btn-success">
-                                                    <i class="bi bi-camera-video"></i> Tham gia Zoom ngay
-                                                </a>
-                                                {% elif s.phong %}
-                                                <span class="badge bg-secondary">
-                                                    <i class="bi bi-building"></i> Phòng: {{ s.phong }}
-                                                </span>
-                                                {% endif %}
+                                                <div class="d-flex gap-2 flex-wrap">
+                                                    {% if s.link_zoom %}
+                                                        {% if 'zoom' in s.link_zoom.lower() or 'http' in s.link_zoom.lower() %}
+                                                        <a href="{{ s.link_zoom }}" target="_blank" class="btn btn-sm btn-success">
+                                                            <i class="bi bi-camera-video"></i> Tham gia Zoom
+                                                        </a>
+                                                        {% else %}
+                                                        <span class="badge bg-secondary">
+                                                            <i class="bi bi-building"></i> {{ s.link_zoom }}
+                                                        </span>
+                                                        {% endif %}
+                                                    {% elif s.phong %}
+                                                    <span class="badge bg-secondary">
+                                                        <i class="bi bi-building"></i> Phòng: {{ s.phong }}
+                                                    </span>
+                                                    {% endif %}
+                                                    
+                                                    {% if s.bai_giang %}
+                                                    <a href="{{ s.bai_giang if s.bai_giang.startswith('http') else '/' + s.bai_giang.lstrip('/') }}" 
+                                                       target="_blank" class="btn btn-sm btn-primary">
+                                                        <i class="bi bi-file-earmark-pdf"></i> Tải bài giảng
+                                                    </a>
+                                                    {% endif %}
+                                                </div>
                                             </div>
                                             <div>
                                                 {% if s.ngay_hoc == today %}
@@ -410,19 +425,32 @@
                                     </td>
                                     <td>
                                         {% if s.link_zoom %}
-                                        <a href="{{ s.link_zoom }}" target="_blank" class="btn btn-sm btn-primary">
-                                            <i class="bi bi-camera-video"></i> Tham gia Zoom
-                                        </a>
-                                        {% elif s.phong %}
-                                        <div>
+                                            {% if 'zoom' in s.link_zoom.lower() or 'http' in s.link_zoom.lower() %}
+                                            <a href="{{ s.link_zoom }}" target="_blank" class="btn btn-sm btn-primary mb-2">
+                                                <i class="bi bi-camera-video"></i> Tham gia Zoom
+                                            </a>
+                                            {% else %}
                                             <span class="badge bg-secondary">
-                                                <i class="bi bi-building"></i> {{ s.phong }}
+                                                <i class="bi bi-building"></i> {{ s.link_zoom }}
                                             </span>
-                                        </div>
+                                            {% endif %}
+                                        {% elif s.phong %}
+                                        <span class="badge bg-secondary">
+                                            <i class="bi bi-building"></i> {{ s.phong }}
+                                        </span>
                                         {% else %}
                                         <span class="text-muted">
                                             <i class="bi bi-dash-circle"></i> Chưa cập nhật
                                         </span>
+                                        {% endif %}
+                                        
+                                        {% if s.bai_giang %}
+                                        <div class="mt-2">
+                                            <a href="{{ s.bai_giang if s.bai_giang.startswith('http') else '/' + s.bai_giang.lstrip('/') }}" 
+                                               target="_blank" class="btn btn-sm btn-success">
+                                                <i class="bi bi-file-earmark-pdf"></i> Tải bài giảng
+                                            </a>
+                                        </div>
                                         {% endif %}
                                     </td>
                                     <td>

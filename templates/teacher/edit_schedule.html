@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Sửa lịch học - {{ course.tieu_de }}{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="title-gradient mb-0">
+            <i class="bi bi-pencil"></i> Sửa lịch học
+        </h1>
+        <a href="{{ url_for('teacher_schedule', course_id=course.id) }}" class="btn btn-outline-custom">
+            <i class="bi bi-arrow-left"></i> Quay lại
+        </a>
+    </div>
+
+    <div class="card-soft">
+        <h5 class="mb-3">
+            <i class="bi bi-book"></i> {{ course.tieu_de }}
+        </h5>
+        
+        <form method="POST" enctype="multipart/form-data">
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">Ngày học <span class="text-danger">*</span></label>
+                    <input type="date" class="form-control" name="ngay_hoc" 
+                           value="{{ schedule.ngay_hoc.strftime('%Y-%m-%d') if schedule.ngay_hoc else '' }}" required>
+                </div>
+                <div class="col-md-2 mb-3">
+                    <label class="form-label">Giờ bắt đầu <span class="text-danger">*</span></label>
+                    <input type="time" class="form-control" name="gio_bat_dau" 
+                           value="{{ schedule.gio_bat_dau.strftime('%H:%M') if schedule.gio_bat_dau else '' }}" required>
+                </div>
+                <div class="col-md-2 mb-3">
+                    <label class="form-label">Giờ kết thúc <span class="text-danger">*</span></label>
+                    <input type="time" class="form-control" name="gio_ket_thuc" 
+                           value="{{ schedule.gio_ket_thuc.strftime('%H:%M') if schedule.gio_ket_thuc else '' }}" required>
+                </div>
+                <div class="col-md-5 mb-3">
+                    <label class="form-label">Link Zoom / Phòng học</label>
+                    <input type="text" class="form-control" name="link_zoom" 
+                           value="{{ schedule.link_zoom or '' }}"
+                           placeholder="https://zoom.us/j/... hoặc Tên phòng">
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Ghi chú</label>
+                <textarea class="form-control" name="ghi_chu" rows="2">{{ schedule.ghi_chu or '' }}</textarea>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">
+                    <i class="bi bi-file-earmark-pdf"></i> Bài giảng
+                </label>
+                {% if schedule.bai_giang %}
+                <div class="alert alert-info mb-2">
+                    <i class="bi bi-info-circle"></i> Bài giảng hiện tại: 
+                    <a href="{{ schedule.bai_giang if schedule.bai_giang.startswith('http') else '/' + schedule.bai_giang.lstrip('/') }}" 
+                       target="_blank">{{ schedule.bai_giang }}</a>
+                </div>
+                {% endif %}
+                <div class="input-group">
+                    <input type="file" class="form-control" name="bai_giang_file" 
+                           accept=".pdf,.ppt,.pptx,.doc,.docx,.txt">
+                    <span class="input-group-text">hoặc</span>
+                    <input type="url" class="form-control" name="bai_giang_link" 
+                           placeholder="Link Google Drive, OneDrive, hoặc URL khác"
+                           value="{{ schedule.bai_giang if schedule.bai_giang and schedule.bai_giang.startswith('http') else '' }}">
+                </div>
+                <small class="text-muted">
+                    <i class="bi bi-info-circle"></i> Upload file mới sẽ thay thế file cũ. Để giữ nguyên, không chọn file.
+                </small>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary-custom">
+                    <i class="bi bi-check-circle"></i> Cập nhật
+                </button>
+                <a href="{{ url_for('teacher_schedule', course_id=course.id) }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle"></i> Hủy
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

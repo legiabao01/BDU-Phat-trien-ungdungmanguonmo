@@ -96,6 +96,12 @@ def ensure_extended_tables(cur):
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         """
     )
+    
+    # Đảm bảo bảng lich_hoc có trường bai_giang
+    try:
+        cur.execute("ALTER TABLE lich_hoc ADD COLUMN bai_giang VARCHAR(500) NULL AFTER link_zoom")
+    except:
+        pass  # Bỏ qua nếu đã có
 
 
 def generate_code(prefix="CERT"):
@@ -967,6 +973,187 @@ def create_assignment(course_id):
         return redirect(url_for('assignments', course_id=course_id))
     
     return render_template('teacher/create_assignment.html', course_id=course_id)
+
+# ==================== QUẢN LÝ LỊCH HỌC ====================
+
+@app.route('/teacher/schedule/<int:course_id>')
+@teacher_required
+def teacher_schedule(course_id):
+    """Quản lý lịch học cho giáo viên"""
+    cur = mysql.connection.cursor()
+    
+    # Kiểm tra giáo viên sở hữu khóa
+    cur.execute("SELECT * FROM khoa_hoc WHERE id=%s AND teacher_id=%s", (course_id, session['user_id']))
+    course = cur.fetchone()
+    if not course:
+        cur.close()
+        flash('Bạn không có quyền với khóa học này', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    # Lấy danh sách lịch học
+    cur.execute("""
+        SELECT * FROM lich_hoc 
+        WHERE khoa_hoc_id=%s 
+        ORDER BY ngay_hoc, gio_bat_dau
+    """, (course_id,))
+    schedules = cur.fetchall()
+    
+    cur.close()
+    return render_template('teacher/schedule.html', course=course, schedules=schedules)
+
+@app.route('/teacher/schedule/<int:course_id>/create', methods=['POST'])
+@teacher_required
+def teacher_create_schedule(course_id):
+    """Tạo lịch học mới"""
+    cur = mysql.connection.cursor()
+    
+    # Kiểm tra quyền
+    cur.execute("SELECT * FROM khoa_hoc WHERE id=%s AND teacher_id=%s", (course_id, session['user_id']))
+    course = cur.fetchone()
+    if not course:
+        cur.close()
+        flash('Bạn không có quyền với khóa học này', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    ngay_hoc = request.form.get('ngay_hoc')
+    gio_bat_dau = request.form.get('gio_bat_dau')
+    gio_ket_thuc = request.form.get('gio_ket_thuc')
+    link_zoom = request.form.get('link_zoom', '').strip()
+    ghi_chu = request.form.get('ghi_chu', '').strip()
+    
+    # Xử lý upload bài giảng
+    bai_giang = None
+    if 'bai_giang_file' in request.files:
+        file = request.files['bai_giang_file']
+        if file.filename:
+            import os
+            upload_folder = os.path.join('static', 'uploads', 'lectures', str(course_id))
+            os.makedirs(upload_folder, exist_ok=True)
+            filename = f"{course_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}_{file.filename}"
+            file_path = os.path.join(upload_folder, filename)
+            file.save(file_path)
+            bai_giang = '/' + file_path.replace('\\', '/')
+    
+    # Nếu không có file, dùng link
+    if not bai_giang:
+        bai_giang_link = request.form.get('bai_giang_link', '').strip()
+        if bai_giang_link:
+            bai_giang = bai_giang_link
+    
+    cur.execute("""
+        INSERT INTO lich_hoc (khoa_hoc_id, ngay_hoc, gio_bat_dau, gio_ket_thuc, link_zoom, ghi_chu, bai_giang)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+    """, (course_id, ngay_hoc, gio_bat_dau, gio_ket_thuc, link_zoom or None, ghi_chu or None, bai_giang or None))
+    
+    mysql.connection.commit()
+    cur.close()
+    
+    flash('Đã thêm buổi học mới!', 'success')
+    return redirect(url_for('teacher_schedule', course_id=course_id))
+
+@app.route('/teacher/schedule/<int:course_id>/<int:schedule_id>/edit', methods=['GET', 'POST'])
+@teacher_required
+def teacher_edit_schedule(course_id, schedule_id):
+    """Sửa lịch học"""
+    cur = mysql.connection.cursor()
+    
+    # Kiểm tra quyền
+    cur.execute("SELECT * FROM khoa_hoc WHERE id=%s AND teacher_id=%s", (course_id, session['user_id']))
+    course = cur.fetchone()
+    if not course:
+        cur.close()
+        flash('Bạn không có quyền với khóa học này', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    cur.execute("SELECT * FROM lich_hoc WHERE id=%s AND khoa_hoc_id=%s", (schedule_id, course_id))
+    schedule = cur.fetchone()
+    
+    if not schedule:
+        cur.close()
+        flash('Không tìm thấy buổi học', 'danger')
+        return redirect(url_for('teacher_schedule', course_id=course_id))
+    
+    if request.method == 'POST':
+        ngay_hoc = request.form.get('ngay_hoc')
+        gio_bat_dau = request.form.get('gio_bat_dau')
+        gio_ket_thuc = request.form.get('gio_ket_thuc')
+        link_zoom = request.form.get('link_zoom', '').strip()
+        ghi_chu = request.form.get('ghi_chu', '').strip()
+        
+        # Xử lý upload bài giảng mới
+        bai_giang = schedule.get('bai_giang')  # Giữ nguyên nếu không upload mới
+        if 'bai_giang_file' in request.files:
+            file = request.files['bai_giang_file']
+            if file.filename:
+                import os
+                # Xóa file cũ nếu có
+                if bai_giang and not bai_giang.startswith('http'):
+                    old_path = bai_giang.lstrip('/')
+                    if os.path.exists(old_path):
+                        try:
+                            os.remove(old_path)
+                        except:
+                            pass
+                
+                upload_folder = os.path.join('static', 'uploads', 'lectures', str(course_id))
+                os.makedirs(upload_folder, exist_ok=True)
+                filename = f"{course_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}_{file.filename}"
+                file_path = os.path.join(upload_folder, filename)
+                file.save(file_path)
+                bai_giang = '/' + file_path.replace('\\', '/')
+        
+        # Nếu không có file mới, kiểm tra link
+        bai_giang_link = request.form.get('bai_giang_link', '').strip()
+        if bai_giang_link and not ('bai_giang_file' in request.files and request.files['bai_giang_file'].filename):
+            bai_giang = bai_giang_link
+        
+        cur.execute("""
+            UPDATE lich_hoc 
+            SET ngay_hoc=%s, gio_bat_dau=%s, gio_ket_thuc=%s, link_zoom=%s, ghi_chu=%s, bai_giang=%s
+            WHERE id=%s
+        """, (ngay_hoc, gio_bat_dau, gio_ket_thuc, link_zoom or None, ghi_chu or None, bai_giang or None, schedule_id))
+        
+        mysql.connection.commit()
+        cur.close()
+        
+        flash('Đã cập nhật buổi học!', 'success')
+        return redirect(url_for('teacher_schedule', course_id=course_id))
+    
+    cur.close()
+    return render_template('teacher/edit_schedule.html', course=course, schedule=schedule)
+
+@app.route('/teacher/schedule/<int:course_id>/<int:schedule_id>/delete', methods=['POST'])
+@teacher_required
+def teacher_delete_schedule(course_id, schedule_id):
+    """Xóa lịch học"""
+    cur = mysql.connection.cursor()
+    
+    # Kiểm tra quyền
+    cur.execute("SELECT * FROM khoa_hoc WHERE id=%s AND teacher_id=%s", (course_id, session['user_id']))
+    course = cur.fetchone()
+    if not course:
+        cur.close()
+        flash('Bạn không có quyền với khóa học này', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    # Xóa file bài giảng nếu có
+    cur.execute("SELECT bai_giang FROM lich_hoc WHERE id=%s", (schedule_id,))
+    schedule = cur.fetchone()
+    if schedule and schedule.get('bai_giang') and not schedule['bai_giang'].startswith('http'):
+        import os
+        file_path = schedule['bai_giang'].lstrip('/')
+        if os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+            except:
+                pass
+    
+    cur.execute("DELETE FROM lich_hoc WHERE id=%s", (schedule_id,))
+    mysql.connection.commit()
+    cur.close()
+    
+    flash('Đã xóa buổi học!', 'success')
+    return redirect(url_for('teacher_schedule', course_id=course_id))
 
 # ==================== ĐIỂM DANH ====================
 
