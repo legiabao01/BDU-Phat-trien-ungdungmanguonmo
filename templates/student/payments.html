@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block title %}Lịch sử thanh toán - Học viên{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="title-gradient mb-0">Lịch sử thanh toán</h1>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-custom">
+            <i class="bi bi-arrow-left"></i> Về Dashboard
+        </a>
+    </div>
+    
+    <!-- Tổng tiền đã thanh toán -->
+    <div class="card-soft mb-4">
+        <div class="row text-center">
+            <div class="col-md-4">
+                <h6 class="text-muted mb-2">Tổng đã thanh toán</h6>
+                <h4 class="text-primary mb-0">
+                    <i class="bi bi-cash-coin"></i> {{ "{:,.0f}".format(total_paid_only) }} VNĐ
+                </h4>
+            </div>
+            <div class="col-md-4">
+                <h6 class="text-muted mb-2">Tổng đã hoàn tiền</h6>
+                <h4 class="text-success mb-0">
+                    <i class="bi bi-arrow-counterclockwise"></i> {{ "{:,.0f}".format(total_refunded) }} VNĐ
+                </h4>
+            </div>
+            <div class="col-md-4">
+                <h6 class="text-muted mb-2">Số dư hiện tại</h6>
+                <h2 class="text-brand-green mb-0">{{ "{:,.0f}".format(total_paid) }} VNĐ</h2>
+                <small class="text-muted">(Đã trừ hoàn tiền)</small>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Danh sách thanh toán -->
+    <div class="card-soft">
+        {% if payments %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Loại</th>
+                        <th>Khóa học</th>
+                        <th>Mã giao dịch</th>
+                        <th>Số tiền</th>
+                        <th>Phương thức</th>
+                        <th>Trạng thái</th>
+                        <th>Ngày</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for payment in payments %}
+                    <tr class="{% if payment.status == 'refunded' %}table-success{% endif %}">
+                        <td>
+                            {% if payment.status == 'refunded' %}
+                                <span class="badge bg-success">
+                                    <i class="bi bi-arrow-counterclockwise"></i> Hoàn tiền
+                                </span>
+                            {% elif payment.status == 'paid' %}
+                                <span class="badge bg-primary">
+                                    <i class="bi bi-cash-coin"></i> Thanh toán
+                                </span>
+                            {% elif payment.status == 'pending' %}
+                                <span class="badge bg-warning">
+                                    <i class="bi bi-clock"></i> Đang xử lý
+                                </span>
+                            {% else %}
+                                <span class="badge bg-danger">
+                                    <i class="bi bi-x-circle"></i> Thất bại
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                {% if payment.hinh_anh %}
+                                <img src="{{ payment.hinh_anh }}" class="rounded me-2" style="width: 50px; height: 50px; object-fit: cover;">
+                                {% else %}
+                                <div class="bg-secondary rounded me-2 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                    <i class="bi bi-book text-white"></i>
+                                </div>
+                                {% endif %}
+                                <div>
+                                    <strong>{{ payment.course_name }}</strong>
+                                    {% if payment.status == 'refunded' %}
+                                    <br><small class="text-success"><i class="bi bi-info-circle"></i> Hoàn tiền cho khóa học này</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <code class="small">{{ payment.txn_ref }}</code>
+                            {% if payment.status == 'refunded' and 'REFUND-' in payment.txn_ref %}
+                            <br><small class="text-muted">(Hoàn cho: {{ payment.txn_ref.replace('REFUND-', '') }})</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if payment.status == 'refunded' %}
+                            <strong class="text-success fs-5">
+                                <i class="bi bi-plus-circle"></i> +{{ "{:,.0f}".format(payment.amount) }} VNĐ
+                            </strong>
+                            <br><small class="text-success">(Đã hoàn về tài khoản)</small>
+                            {% else %}
+                            <strong class="text-danger fs-5">
+                                <i class="bi bi-dash-circle"></i> -{{ "{:,.0f}".format(payment.amount) }} VNĐ
+                            </strong>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if payment.status == 'refunded' %}
+                            <span class="badge bg-info">Hoàn tiền</span>
+                            {% else %}
+                            {{ payment.provider }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge-custom badge-{{ 'success' if payment.status == 'paid' else 'info' if payment.status == 'refunded' else 'warning' if payment.status == 'pending' else 'danger' }}">
+                                {% if payment.status == 'paid' %}
+                                    <i class="bi bi-check-circle"></i> Đã thanh toán
+                                {% elif payment.status == 'refunded' %}
+                                    <i class="bi bi-arrow-counterclockwise"></i> Đã hoàn tiền
+                                {% elif payment.status == 'pending' %}
+                                    <i class="bi bi-clock"></i> Đang xử lý
+                                {% else %}
+                                    <i class="bi bi-x-circle"></i> Thất bại
+                                {% endif %}
+                            </span>
+                        </td>
+                        <td>{{ payment.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-cash-coin text-muted" style="font-size: 4rem;"></i>
+            <p class="text-muted mt-3">Bạn chưa có giao dịch thanh toán nào.</p>
+            <a href="{{ url_for('courses') }}" class="btn btn-primary-custom mt-2">
+                <i class="bi bi-search"></i> Tìm khóa học
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

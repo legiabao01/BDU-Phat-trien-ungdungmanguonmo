@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}Quản lý đăng ký - Admin{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="title-gradient mb-0">Quản lý đăng ký khóa học</h1>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-custom">
+            <i class="bi bi-arrow-left"></i> Về Dashboard
+        </a>
+    </div>
+    
+    <div class="card-soft">
+        {% if enrollments %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Học viên</th>
+                        <th>Email</th>
+                        <th>Khóa học</th>
+                        <th>Giá</th>
+                        <th>Trạng thái</th>
+                        <th>Ngày đăng ký</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for enrollment in enrollments %}
+                    <tr>
+                        <td><strong>{{ enrollment.ho_ten }}</strong></td>
+                        <td>{{ enrollment.email }}</td>
+                        <td>{{ enrollment.course_name }}</td>
+                        <td>{{ "{:,.0f}".format(enrollment.gia) }} VNĐ</td>
+                        <td>
+                            <span class="badge-custom badge-{{ 'success' if enrollment.trang_thai == 'active' else 'secondary' if enrollment.trang_thai == 'cancelled' else 'warning' }}">
+                                {{ enrollment.trang_thai }}
+                            </span>
+                        </td>
+                        <td>{{ enrollment.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                        <td>
+                            {% if enrollment.trang_thai == 'active' %}
+                            <form method="POST" action="{{ url_for('admin_cancel_enrollment', enrollment_id=enrollment.id) }}" 
+                                  onsubmit="return confirm('Bạn có chắc muốn hủy đăng ký của {{ enrollment.ho_ten }} khỏi khóa học {{ enrollment.course_name }}? Hệ thống sẽ tự động hoàn tiền.');" style="display: inline;">
+                                <button type="submit" class="btn btn-sm btn-danger">
+                                    <i class="bi bi-x-circle"></i> Hủy đăng ký
+                                </button>
+                            </form>
+                            {% else %}
+                            <div>
+                                <span class="badge bg-secondary mb-2 d-block">Đã hủy</span>
+                                {% if enrollment.has_payment and not enrollment.has_refund %}
+                                <form method="POST" action="{{ url_for('admin_create_refund', enrollment_id=enrollment.id) }}" 
+                                      onsubmit="return confirm('Tạo hoàn tiền {{ "{:,.0f}".format(enrollment.refund_amount) }} VNĐ cho {{ enrollment.ho_ten }}?');" style="display: inline;">
+                                    <button type="submit" class="btn btn-sm btn-success">
+                                        <i class="bi bi-arrow-counterclockwise"></i> Tạo hoàn tiền
+                                    </button>
+                                </form>
+                                {% elif enrollment.has_refund %}
+                                <span class="badge bg-success">
+                                    <i class="bi bi-check-circle"></i> Đã hoàn tiền
+                                </span>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-clipboard-x text-muted" style="font-size: 4rem;"></i>
+            <p class="text-muted mt-3">Chưa có đăng ký nào.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

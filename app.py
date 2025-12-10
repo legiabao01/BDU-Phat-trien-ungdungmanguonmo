@@ -44,6 +44,7 @@ def ensure_discussion_table(cur):
 
 def ensure_extended_tables(cur):
     """Đảm bảo các bảng cho thanh toán, điểm danh, chứng nhận tồn tại."""
+    # Tạo bảng payments với status bao gồm refunded
     cur.execute(
         """
         CREATE TABLE IF NOT EXISTS payments (
@@ -52,7 +53,7 @@ def ensure_extended_tables(cur):
             khoa_hoc_id INT NOT NULL,
             amount DECIMAL(12,2) NOT NULL,
             provider VARCHAR(50) DEFAULT 'sandbox',
-            status ENUM('pending','paid','failed') DEFAULT 'paid',
+            status ENUM('pending','paid','failed','refunded') DEFAULT 'paid',
             txn_ref VARCHAR(100),
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -60,6 +61,12 @@ def ensure_extended_tables(cur):
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         """
     )
+    
+    # Nếu bảng đã tồn tại nhưng chưa có 'refunded' trong ENUM, cần ALTER
+    try:
+        cur.execute("ALTER TABLE payments MODIFY status ENUM('pending','paid','failed','refunded') DEFAULT 'paid'")
+    except:
+        pass  # Bỏ qua nếu đã có hoặc lỗi
 
     cur.execute(
         """
@@ -250,6 +257,136 @@ def courses():
         mode=mode,
         sort=sort,
     )
+
+@app.route('/student/learn/<int:course_id>')
+@login_required
+def student_learn(course_id):
+    """Trang học tập cho học viên"""
+    user_id = session['user_id']
+    if session.get('role') != 'student':
+        flash('Chỉ học viên mới có thể truy cập trang này', 'warning')
+        return redirect(url_for('dashboard'))
+    
+    cur = mysql.connection.cursor()
+    ensure_extended_tables(cur)
+    ensure_discussion_table(cur)
+    
+    # Kiểm tra đã đăng ký chưa
+    cur.execute("""
+        SELECT dkkh.*, kh.*
+        FROM dang_ky_khoa_hoc dkkh
+        JOIN khoa_hoc kh ON dkkh.khoa_hoc_id = kh.id
+        WHERE dkkh.user_id = %s AND dkkh.khoa_hoc_id = %s AND dkkh.trang_thai = 'active'
+    """, (user_id, course_id))
+    enrollment = cur.fetchone()
+    
+    if not enrollment:
+        flash('Bạn chưa đăng ký khóa học này', 'warning')
+        cur.close()
+        return redirect(url_for('dashboard'))
+    
+    course = enrollment
+    
+    # Lấy thông tin giáo viên
+    teacher = None
+    if course.get('teacher_id'):
+        cur.execute("SELECT * FROM users WHERE id = %s", (course['teacher_id'],))
+        teacher = cur.fetchone()
+    
+    # Lấy nội dung khóa học
+    cur.execute("""
+        SELECT * FROM chi_tiet_khoa_hoc 
+        WHERE khoa_hoc_id = %s 
+        ORDER BY thu_tu ASC
+    """, (course_id,))
+    course_content = cur.fetchall()
+    
+    # Lấy lịch học
+    cur.execute("""
+        SELECT * FROM lich_hoc 
+        WHERE khoa_hoc_id = %s 
+        ORDER BY ngay_hoc, gio_bat_dau
+    """, (course_id,))
+    schedule_raw = cur.fetchall()
+    
+    # Xử lý time fields (có thể là timedelta từ MySQL)
+    schedule = []
+    for s in schedule_raw:
+        s_dict = dict(s)
+        # Convert timedelta to string nếu cần
+        if s_dict.get('gio_bat_dau'):
+            if hasattr(s_dict['gio_bat_dau'], 'total_seconds'):
+                # Là timedelta
+                total_seconds = int(s_dict['gio_bat_dau'].total_seconds())
+                hours = total_seconds // 3600
+                minutes = (total_seconds % 3600) // 60
+                s_dict['gio_bat_dau'] = f"{hours:02d}:{minutes:02d}"
+            elif hasattr(s_dict['gio_bat_dau'], 'strftime'):
+                # Là time object
+                s_dict['gio_bat_dau'] = s_dict['gio_bat_dau'].strftime('%H:%M')
+            else:
+                s_dict['gio_bat_dau'] = str(s_dict['gio_bat_dau'])
+        
+        if s_dict.get('gio_ket_thuc'):
+            if hasattr(s_dict['gio_ket_thuc'], 'total_seconds'):
+                # Là timedelta
+                total_seconds = int(s_dict['gio_ket_thuc'].total_seconds())
+                hours = total_seconds // 3600
+                minutes = (total_seconds % 3600) // 60
+                s_dict['gio_ket_thuc'] = f"{hours:02d}:{minutes:02d}"
+            elif hasattr(s_dict['gio_ket_thuc'], 'strftime'):
+                # Là time object
+                s_dict['gio_ket_thuc'] = s_dict['gio_ket_thuc'].strftime('%H:%M')
+            else:
+                s_dict['gio_ket_thuc'] = str(s_dict['gio_ket_thuc'])
+        
+        schedule.append(s_dict)
+    
+    # Lấy bài tập
+    cur.execute("""
+        SELECT bt.*, 
+               (SELECT COUNT(*) FROM nop_bai WHERE bai_tap_id = bt.id AND user_id = %s) as has_submitted
+        FROM bai_tap bt
+        WHERE bt.khoa_hoc_id = %s
+        ORDER BY bt.created_at DESC
+    """, (user_id, course_id))
+    assignments = cur.fetchall()
+    
+    # Lấy thảo luận
+    cur.execute("""
+        SELECT tl.*, u.ho_ten, u.role
+        FROM thao_luan tl
+        JOIN users u ON tl.user_id = u.id
+        WHERE tl.khoa_hoc_id = %s
+        ORDER BY tl.created_at DESC
+        LIMIT 50
+    """, (course_id,))
+    discussions = cur.fetchall()
+    
+    # Tính tiến độ
+    progress = compute_progress(cur, course_id, user_id)
+    
+    # Lấy điểm danh của học viên
+    cur.execute("""
+        SELECT dd.*, lh.ngay_hoc, lh.gio_bat_dau
+        FROM diem_danh dd
+        JOIN lich_hoc lh ON dd.lich_hoc_id = lh.id
+        WHERE lh.khoa_hoc_id = %s AND dd.user_id = %s
+        ORDER BY lh.ngay_hoc DESC
+    """, (course_id, user_id))
+    attendance_records = cur.fetchall()
+    
+    cur.close()
+    
+    return render_template('student/learn.html', 
+                         course=course,
+                         teacher=teacher,
+                         course_content=course_content,
+                         schedule=schedule,
+                         assignments=assignments,
+                         discussions=discussions,
+                         progress=progress,
+                         attendance_records=attendance_records)
 
 @app.route('/course/<int:course_id>')
 def course_detail(course_id):
@@ -499,6 +636,120 @@ def dashboard():
 
 # ==================== THANH TOÁN / MUA KHÓA HỌC ====================
 
+@app.route('/course/<int:course_id>/checkout')
+@login_required
+def checkout(course_id):
+    """Trang thanh toán"""
+    cur = mysql.connection.cursor()
+    
+    # Lấy thông tin khóa học
+    cur.execute("SELECT * FROM khoa_hoc WHERE id=%s AND trang_thai='active'", (course_id,))
+    course = cur.fetchone()
+    
+    if not course:
+        flash('Khóa học không tồn tại', 'danger')
+        cur.close()
+        return redirect(url_for('courses'))
+    
+    # Kiểm tra đã đăng ký chưa
+    cur.execute(
+        "SELECT id, trang_thai FROM dang_ky_khoa_hoc WHERE user_id=%s AND khoa_hoc_id=%s",
+        (session['user_id'], course_id),
+    )
+    existing_enrollment = cur.fetchone()
+    
+    if existing_enrollment and existing_enrollment['trang_thai'] == 'active':
+        flash('Bạn đã đăng ký khóa học này rồi', 'info')
+        cur.close()
+        return redirect(url_for('dashboard'))
+    
+    cur.close()
+    return render_template('checkout.html', course=course)
+
+@app.route('/course/<int:course_id>/checkout/process', methods=['POST'])
+@login_required
+def process_payment(course_id):
+    """Xử lý thanh toán"""
+    user_id = session['user_id']
+    cur = mysql.connection.cursor()
+    ensure_extended_tables(cur)
+
+    # Kiểm tra khóa học
+    cur.execute("SELECT * FROM khoa_hoc WHERE id=%s AND trang_thai='active'", (course_id,))
+    course = cur.fetchone()
+    if not course:
+        flash('Khóa học không tồn tại', 'danger')
+        cur.close()
+        return redirect(url_for('courses'))
+
+    # Kiểm tra đã đăng ký chưa
+    cur.execute(
+        "SELECT id, trang_thai FROM dang_ky_khoa_hoc WHERE user_id=%s AND khoa_hoc_id=%s",
+        (user_id, course_id),
+    )
+    existing_enrollment = cur.fetchone()
+    
+    if existing_enrollment:
+        if existing_enrollment['trang_thai'] == 'active':
+            flash('Bạn đã đăng ký khóa học này rồi', 'warning')
+            cur.close()
+            return redirect(url_for('dashboard'))
+        elif existing_enrollment['trang_thai'] == 'cancelled':
+            # Cập nhật enrollment từ cancelled thành active
+            cur.execute("""
+                UPDATE dang_ky_khoa_hoc 
+                SET trang_thai = 'active', updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s
+            """, (existing_enrollment['id'],))
+            enrollment_updated = True
+        else:
+            enrollment_updated = False
+    else:
+        enrollment_updated = False
+
+    amount = course.get('gia', 0) or 0
+    payment_method = request.form.get('payment_method', 'sandbox')
+
+    # Tạo bản ghi thanh toán
+    txn_ref = f'TXN-{course_id}-{user_id}-{int(datetime.now().timestamp())}'
+    cur.execute(
+        """
+        INSERT INTO payments (user_id, khoa_hoc_id, amount, provider, status, txn_ref)
+        VALUES (%s,%s,%s,%s,%s,%s)
+        """,
+        (user_id, course_id, amount, payment_method, 'paid', txn_ref),
+    )
+
+    # Chỉ tạo enrollment mới nếu chưa có hoặc chưa được cập nhật
+    if not enrollment_updated:
+        cur.execute(
+            """
+            INSERT INTO dang_ky_khoa_hoc (user_id, khoa_hoc_id, trang_thai)
+            VALUES (%s,%s,'active')
+            """,
+            (user_id, course_id),
+        )
+
+    mysql.connection.commit()
+    cur.close()
+    
+    flash(f'Thanh toán thành công {amount:,.0f} VNĐ! Bạn đã được ghi danh vào khóa học.', 'success')
+    return redirect(url_for('payment_success', course_id=course_id))
+
+@app.route('/course/<int:course_id>/payment/success')
+@login_required
+def payment_success(course_id):
+    """Trang thành công sau thanh toán"""
+    cur = mysql.connection.cursor()
+    cur.execute("SELECT * FROM khoa_hoc WHERE id=%s", (course_id,))
+    course = cur.fetchone()
+    cur.close()
+    
+    if not course:
+        return redirect(url_for('dashboard'))
+    
+    return render_template('payment_success.html', course=course)
+
 @app.route('/course/<int:course_id>/buy', methods=['POST'])
 @login_required
 def buy_course(course_id):
@@ -514,16 +765,34 @@ def buy_course(course_id):
         cur.close()
         return jsonify({'success': False, 'message': 'Khóa học không tồn tại'}), 404
 
-    # Kiểm tra đã đăng ký chưa
+    # Kiểm tra đã đăng ký chưa (chỉ kiểm tra status active)
     cur.execute(
-        "SELECT id FROM dang_ky_khoa_hoc WHERE user_id=%s AND khoa_hoc_id=%s",
+        "SELECT id, trang_thai FROM dang_ky_khoa_hoc WHERE user_id=%s AND khoa_hoc_id=%s",
         (user_id, course_id),
     )
-    if cur.fetchone():
-        cur.close()
-        return jsonify({'success': False, 'message': 'Bạn đã đăng ký khóa học này rồi'}), 400
-
+    existing_enrollment = cur.fetchone()
+    
     amount = course.get('gia', 0) or 0
+    
+    # Kiểm tra và xử lý enrollment
+    if existing_enrollment:
+        # Nếu đã có enrollment active thì không cho đăng ký lại
+        if existing_enrollment['trang_thai'] == 'active':
+            cur.close()
+            return jsonify({'success': False, 'message': 'Bạn đã đăng ký khóa học này rồi'}), 400
+        # Nếu enrollment đã bị cancelled, cập nhật lại thành active
+        elif existing_enrollment['trang_thai'] == 'cancelled':
+            cur.execute("""
+                UPDATE dang_ky_khoa_hoc 
+                SET trang_thai = 'active', updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s
+            """, (existing_enrollment['id'],))
+            # Không tạo enrollment mới, chỉ tạo payment
+            enrollment_updated = True
+        else:
+            enrollment_updated = False
+    else:
+        enrollment_updated = False
 
     # Tạo bản ghi thanh toán (giả lập - tự động thành công)
     txn_ref = f'TXN-{course_id}-{user_id}-{int(datetime.now().timestamp())}'
@@ -535,14 +804,15 @@ def buy_course(course_id):
         (user_id, course_id, amount, 'sandbox', 'paid', txn_ref),
     )
 
-    # Ghi enrollment sau khi thanh toán thành công
-    cur.execute(
-        """
-        INSERT INTO dang_ky_khoa_hoc (user_id, khoa_hoc_id, trang_thai)
-        VALUES (%s,%s,'active')
-        """,
-        (user_id, course_id),
-    )
+    # Chỉ tạo enrollment mới nếu chưa có hoặc chưa được cập nhật
+    if not enrollment_updated:
+        cur.execute(
+            """
+            INSERT INTO dang_ky_khoa_hoc (user_id, khoa_hoc_id, trang_thai)
+            VALUES (%s,%s,'active')
+            """,
+            (user_id, course_id),
+        )
 
     mysql.connection.commit()
     cur.close()
@@ -610,10 +880,21 @@ def add_discussion(course_id):
     content = request.form.get('noi_dung', '').strip()
     if not content:
         flash('Nội dung không được để trống', 'warning')
-        return redirect(url_for('course_detail', course_id=course_id))
+        return redirect(request.referrer or url_for('course_detail', course_id=course_id))
 
     cur = mysql.connection.cursor()
     ensure_discussion_table(cur)
+
+    # Kiểm tra học viên đã đăng ký (nếu là student)
+    if session.get('role') == 'student':
+        cur.execute("""
+            SELECT id FROM dang_ky_khoa_hoc 
+            WHERE user_id = %s AND khoa_hoc_id = %s AND trang_thai = 'active'
+        """, (session['user_id'], course_id))
+        if not cur.fetchone():
+            flash('Bạn cần đăng ký khóa học để tham gia thảo luận', 'warning')
+            cur.close()
+            return redirect(url_for('course_detail', course_id=course_id))
 
     cur.execute("SELECT id FROM khoa_hoc WHERE id = %s", (course_id,))
     if not cur.fetchone():
@@ -632,7 +913,7 @@ def add_discussion(course_id):
     cur.close()
 
     flash('Đã gửi thảo luận của bạn', 'success')
-    return redirect(url_for('course_detail', course_id=course_id))
+    return redirect(request.referrer or url_for('course_detail', course_id=course_id))
 
 # ==================== CHỨC NĂNG NÂNG CAO 2: QUẢN LÝ BÀI TẬP ====================
 
@@ -1054,6 +1335,47 @@ def admin_delete_course(course_id):
     flash('Đã xóa khóa học', 'success')
     return redirect(url_for('admin_courses'))
 
+@app.route('/student/payments')
+@login_required
+def student_payments():
+    """Lịch sử thanh toán của học viên"""
+    user_id = session['user_id']
+    if session.get('role') != 'student':
+        flash('Chỉ học viên mới có thể truy cập trang này', 'warning')
+        return redirect(url_for('dashboard'))
+    
+    cur = mysql.connection.cursor()
+    ensure_extended_tables(cur)
+    
+    cur.execute("""
+        SELECT p.*, kh.tieu_de as course_name, kh.hinh_anh
+        FROM payments p
+        JOIN khoa_hoc kh ON p.khoa_hoc_id = kh.id
+        WHERE p.user_id = %s
+        ORDER BY p.created_at DESC
+    """, (user_id,))
+    payments = cur.fetchall()
+    
+    # Tính tổng tiền đã thanh toán và hoàn tiền
+    cur.execute("""
+        SELECT 
+            COALESCE(SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END), 0) as total_paid_only,
+            COALESCE(SUM(CASE WHEN status = 'refunded' THEN amount ELSE 0 END), 0) as total_refunded
+        FROM payments
+        WHERE user_id = %s
+    """, (user_id,))
+    stats = cur.fetchone()
+    total_paid_only = stats['total_paid_only'] or 0
+    total_refunded = stats['total_refunded'] or 0
+    total_paid = total_paid_only - total_refunded
+    
+    cur.close()
+    return render_template('student/payments.html', 
+                         payments=payments, 
+                         total_paid=total_paid,
+                         total_paid_only=total_paid_only,
+                         total_refunded=total_refunded)
+
 @app.route('/admin/payments')
 @admin_required
 def admin_payments():
@@ -1085,6 +1407,201 @@ def admin_payments():
     cur.close()
     
     return render_template('admin/payments.html', payments=payments, stats=stats)
+
+@app.route('/admin/enrollments')
+@admin_required
+def admin_enrollments():
+    """Quản lý đăng ký khóa học"""
+    cur = mysql.connection.cursor()
+    ensure_extended_tables(cur)
+    
+    cur.execute("""
+        SELECT dkkh.*, u.ho_ten, u.email, kh.tieu_de as course_name, kh.gia
+        FROM dang_ky_khoa_hoc dkkh
+        JOIN users u ON dkkh.user_id = u.id
+        JOIN khoa_hoc kh ON dkkh.khoa_hoc_id = kh.id
+        ORDER BY dkkh.created_at DESC
+    """)
+    enrollments = cur.fetchall()
+    
+    # Kiểm tra refund status cho mỗi enrollment
+    for enrollment in enrollments:
+        # Kiểm tra có payment gốc không
+        cur.execute("""
+            SELECT * FROM payments 
+            WHERE user_id = %s AND khoa_hoc_id = %s AND status = 'paid'
+            ORDER BY created_at DESC
+            LIMIT 1
+        """, (enrollment['user_id'], enrollment['khoa_hoc_id']))
+        original_payment = cur.fetchone()
+        
+        enrollment['has_payment'] = original_payment is not None
+        enrollment['has_refund'] = False
+        
+        if original_payment and enrollment['trang_thai'] == 'cancelled':
+            # Kiểm tra đã có refund chưa
+            cur.execute("""
+                SELECT * FROM payments 
+                WHERE user_id = %s AND khoa_hoc_id = %s AND status = 'refunded' 
+                AND txn_ref LIKE %s
+            """, (enrollment['user_id'], enrollment['khoa_hoc_id'], f'REFUND-{original_payment["txn_ref"]}%'))
+            existing_refund = cur.fetchone()
+            enrollment['has_refund'] = existing_refund is not None
+            enrollment['refund_amount'] = original_payment['amount'] if original_payment else 0
+        else:
+            enrollment['refund_amount'] = 0
+    
+    cur.close()
+    
+    return render_template('admin/enrollments.html', enrollments=enrollments)
+
+@app.route('/admin/enrollments/<int:enrollment_id>/cancel', methods=['POST'])
+@admin_required
+def admin_cancel_enrollment(enrollment_id):
+    """Hủy đăng ký khóa học của học viên và hoàn tiền"""
+    cur = mysql.connection.cursor()
+    ensure_extended_tables(cur)
+    
+    cur.execute("""
+        SELECT dkkh.*, u.ho_ten, kh.tieu_de, kh.gia
+        FROM dang_ky_khoa_hoc dkkh
+        JOIN users u ON dkkh.user_id = u.id
+        JOIN khoa_hoc kh ON dkkh.khoa_hoc_id = kh.id
+        WHERE dkkh.id = %s
+    """, (enrollment_id,))
+    enrollment = cur.fetchone()
+    
+    if not enrollment:
+        flash('Không tìm thấy đăng ký', 'danger')
+        cur.close()
+        return redirect(url_for('admin_enrollments'))
+    
+    # Kiểm tra đã bị hủy chưa
+    if enrollment['trang_thai'] == 'cancelled':
+        flash('Đăng ký này đã bị hủy rồi', 'warning')
+        cur.close()
+        return redirect(url_for('admin_enrollments'))
+    
+    # Tìm payment gốc để hoàn tiền
+    cur.execute("""
+        SELECT * FROM payments 
+        WHERE user_id = %s AND khoa_hoc_id = %s AND status = 'paid'
+        ORDER BY created_at DESC
+        LIMIT 1
+    """, (enrollment['user_id'], enrollment['khoa_hoc_id']))
+    original_payment = cur.fetchone()
+    
+    # Kiểm tra đã có refund chưa
+    if original_payment:
+        cur.execute("""
+            SELECT * FROM payments 
+            WHERE user_id = %s AND khoa_hoc_id = %s AND status = 'refunded' 
+            AND txn_ref LIKE %s
+        """, (enrollment['user_id'], enrollment['khoa_hoc_id'], f'REFUND-{original_payment["txn_ref"]}%'))
+        existing_refund = cur.fetchone()
+        if existing_refund:
+            flash('Đã có giao dịch hoàn tiền cho đăng ký này rồi', 'info')
+            cur.close()
+            return redirect(url_for('admin_enrollments'))
+    
+    # Hủy enrollment
+    cur.execute("""
+        UPDATE dang_ky_khoa_hoc 
+        SET trang_thai = 'cancelled', updated_at = CURRENT_TIMESTAMP
+        WHERE id = %s
+    """, (enrollment_id,))
+    
+    # Tạo payment hoàn tiền (refund)
+    if original_payment:
+        refund_amount = original_payment['amount']
+        refund_txn_ref = f'REFUND-{original_payment["txn_ref"]}'
+        cur.execute("""
+            INSERT INTO payments (user_id, khoa_hoc_id, amount, provider, status, txn_ref)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (
+            enrollment['user_id'], 
+            enrollment['khoa_hoc_id'], 
+            refund_amount,
+            'refund',
+            'refunded',
+            refund_txn_ref
+        ))
+        flash(f'Đã hủy đăng ký và hoàn tiền {refund_amount:,.0f} VNĐ cho {enrollment["ho_ten"]}', 'success')
+    else:
+        flash(f'Đã hủy đăng ký của {enrollment["ho_ten"]} (không tìm thấy giao dịch thanh toán để hoàn tiền)', 'warning')
+    
+    mysql.connection.commit()
+    cur.close()
+    
+    return redirect(url_for('admin_enrollments'))
+
+@app.route('/admin/enrollments/<int:enrollment_id>/refund', methods=['POST'])
+@admin_required
+def admin_create_refund(enrollment_id):
+    """Tạo hoàn tiền cho enrollment đã bị hủy nhưng chưa có refund"""
+    cur = mysql.connection.cursor()
+    ensure_extended_tables(cur)
+    
+    cur.execute("""
+        SELECT dkkh.*, u.ho_ten, kh.tieu_de, kh.gia
+        FROM dang_ky_khoa_hoc dkkh
+        JOIN users u ON dkkh.user_id = u.id
+        JOIN khoa_hoc kh ON dkkh.khoa_hoc_id = kh.id
+        WHERE dkkh.id = %s
+    """, (enrollment_id,))
+    enrollment = cur.fetchone()
+    
+    if not enrollment:
+        flash('Không tìm thấy đăng ký', 'danger')
+        cur.close()
+        return redirect(url_for('admin_enrollments'))
+    
+    # Tìm payment gốc
+    cur.execute("""
+        SELECT * FROM payments 
+        WHERE user_id = %s AND khoa_hoc_id = %s AND status = 'paid'
+        ORDER BY created_at DESC
+        LIMIT 1
+    """, (enrollment['user_id'], enrollment['khoa_hoc_id']))
+    original_payment = cur.fetchone()
+    
+    if not original_payment:
+        flash('Không tìm thấy giao dịch thanh toán gốc', 'warning')
+        cur.close()
+        return redirect(url_for('admin_enrollments'))
+    
+    # Kiểm tra đã có refund chưa
+    cur.execute("""
+        SELECT * FROM payments 
+        WHERE user_id = %s AND khoa_hoc_id = %s AND status = 'refunded' 
+        AND txn_ref LIKE %s
+    """, (enrollment['user_id'], enrollment['khoa_hoc_id'], f'REFUND-{original_payment["txn_ref"]}%'))
+    existing_refund = cur.fetchone()
+    
+    if existing_refund:
+        flash('Đã có giao dịch hoàn tiền cho đăng ký này rồi', 'info')
+        cur.close()
+        return redirect(url_for('admin_enrollments'))
+    
+    # Tạo refund
+    refund_amount = original_payment['amount']
+    refund_txn_ref = f'REFUND-{original_payment["txn_ref"]}'
+    cur.execute("""
+        INSERT INTO payments (user_id, khoa_hoc_id, amount, provider, status, txn_ref)
+        VALUES (%s, %s, %s, %s, %s, %s)
+    """, (
+        enrollment['user_id'], 
+        enrollment['khoa_hoc_id'], 
+        refund_amount,
+        'refund',
+        'refunded',
+        refund_txn_ref
+    ))
+    mysql.connection.commit()
+    cur.close()
+    
+    flash(f'Đã tạo hoàn tiền {refund_amount:,.0f} VNĐ cho {enrollment["ho_ten"]}', 'success')
+    return redirect(url_for('admin_enrollments'))
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

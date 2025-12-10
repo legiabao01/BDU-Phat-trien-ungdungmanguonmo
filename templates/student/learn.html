@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+
+{% block title %}Học tập - {{ course.tieu_de }}{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-3 mb-4">
+            <div class="card-soft sticky-top" style="top: 100px;">
+                <h5 class="mb-3"><i class="bi bi-book text-brand-sky"></i> {{ course.tieu_de }}</h5>
+                
+                <!-- Tiến độ -->
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <small class="text-muted">Tiến độ</small>
+                        <small class="text-muted"><strong>{{ "%.0f"|format(progress.progress_ratio*100) }}%</strong></small>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar bg-success" style="width: {{ "%.0f"|format(progress.progress_ratio*100) }}%;"></div>
+                    </div>
+                </div>
+                
+                <!-- Thông tin giáo viên -->
+                {% if teacher %}
+                <div class="border-top pt-3 mb-3">
+                    <h6 class="mb-2"><i class="bi bi-person-badge"></i> Giáo viên</h6>
+                    <p class="mb-1"><strong>{{ teacher.ho_ten }}</strong></p>
+                    <p class="small text-muted mb-1">
+                        <i class="bi bi-envelope"></i> {{ teacher.email }}
+                    </p>
+                    {% if teacher.so_dien_thoai %}
+                    <p class="small text-muted mb-0">
+                        <i class="bi bi-telephone"></i> {{ teacher.so_dien_thoai }}
+                    </p>
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                <!-- Navigation -->
+                <div class="border-top pt-3">
+                    <a href="#content" class="d-block mb-2 text-decoration-none text-brand-sky">
+                        <i class="bi bi-list-ul"></i> Nội dung khóa học
+                    </a>
+                    <a href="#schedule" class="d-block mb-2 text-decoration-none text-brand-sky">
+                        <i class="bi bi-calendar"></i> Lịch học
+                    </a>
+                    <a href="#assignments" class="d-block mb-2 text-decoration-none text-brand-sky">
+                        <i class="bi bi-file-earmark-text"></i> Bài tập
+                    </a>
+                    <a href="#discussion" class="d-block text-decoration-none text-brand-sky">
+                        <i class="bi bi-chat-dots"></i> Thảo luận
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="col-md-9">
+            <!-- Header -->
+            <div class="card-soft mb-4">
+                <h2 class="title-gradient mb-3">{{ course.tieu_de }}</h2>
+                <p class="text-muted">{{ course.mo_ta or 'Không có mô tả' }}</p>
+                <div class="d-flex gap-2 mb-3">
+                    <span class="badge-custom badge-info">{{ course.cap_do or 'N/A' }}</span>
+                    <span class="badge-custom badge-success">{{ course.hinh_thuc or 'online' }}</span>
+                </div>
+            </div>
+            
+            <!-- Nội dung khóa học -->
+            <div id="content" class="card-soft mb-4">
+                <h4 class="title-gradient mb-3"><i class="bi bi-list-ul"></i> Nội dung khóa học</h4>
+                {% if course_content %}
+                <div class="list-group">
+                    {% for item in course_content %}
+                    <div class="list-group-item border-0 shadow-sm mb-2 rounded">
+                        <div class="d-flex align-items-start">
+                            <div class="me-3">
+                                <span class="badge-custom badge-info">{{ item.thu_tu }}</span>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-2"><i class="bi bi-check-circle text-brand-green me-2"></i>{{ item.tieu_de_muc }}</h6>
+                                {% if item.noi_dung %}
+                                <p class="mb-0 text-muted small">{{ item.noi_dung }}</p>
+                                {% endif %}
+                                {% if item.hinh_anh %}
+                                <img src="{{ item.hinh_anh }}" class="img-fluid rounded mt-2" style="max-height: 200px;">
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted">Chưa có nội dung khóa học.</p>
+                {% endif %}
+            </div>
+            
+            <!-- Lịch học -->
+            <div id="schedule" class="card-soft mb-4">
+                <h4 class="title-gradient mb-3"><i class="bi bi-calendar"></i> Lịch học</h4>
+                {% if schedule %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Ngày học</th>
+                                <th>Giờ</th>
+                                <th>Phòng/Link</th>
+                                <th>Điểm danh</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for s in schedule %}
+                            <tr>
+                                <td>{{ s.ngay_hoc.strftime('%d/%m/%Y') if s.ngay_hoc else 'N/A' }}</td>
+                                <td>{{ s.gio_bat_dau }} - {{ s.gio_ket_thuc }}</td>
+                                <td>
+                                    {% if s.link_zoom %}
+                                    <a href="{{ s.link_zoom }}" target="_blank" class="text-brand-sky">
+                                        <i class="bi bi-camera-video"></i> Zoom
+                                    </a>
+                                    {% elif s.phong %}
+                                    <span>{{ s.phong }}</span>
+                                    {% else %}
+                                    <span class="text-muted">Chưa cập nhật</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% set found = False %}
+                                    {% for att in attendance_records %}
+                                        {% if att.lich_hoc_id == s.id %}
+                                            {% set found = True %}
+                                            <span class="badge-custom badge-{{ 'success' if att.status == 'present' else 'warning' if att.status == 'late' else 'danger' }}">
+                                                {{ 'Có mặt' if att.status == 'present' else 'Muộn' if att.status == 'late' else 'Vắng' }}
+                                            </span>
+                                        {% endif %}
+                                    {% endfor %}
+                                    {% if not found %}
+                                    <span class="text-muted small">Chưa điểm danh</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">Chưa có lịch học.</p>
+                {% endif %}
+            </div>
+            
+            <!-- Bài tập -->
+            <div id="assignments" class="card-soft mb-4">
+                <h4 class="title-gradient mb-3"><i class="bi bi-file-earmark-text"></i> Bài tập</h4>
+                {% if assignments %}
+                <div class="list-group">
+                    {% for assignment in assignments %}
+                    <div class="list-group-item border-0 shadow-sm mb-2 rounded">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-2">
+                                    {{ assignment.tieu_de }}
+                                    {% if assignment.is_required %}
+                                    <span class="badge-custom badge-danger small">Bắt buộc</span>
+                                    {% endif %}
+                                </h6>
+                                {% if assignment.mo_ta %}
+                                <p class="small text-muted mb-2">{{ assignment.mo_ta }}</p>
+                                {% endif %}
+                                {% if assignment.han_nop %}
+                                <small class="text-muted">
+                                    <i class="bi bi-clock"></i> Hạn nộp: {{ assignment.han_nop.strftime('%d/%m/%Y %H:%M') }}
+                                </small>
+                                {% endif %}
+                            </div>
+                            <div>
+                                {% if assignment.has_submitted %}
+                                <span class="badge-custom badge-success">Đã nộp</span>
+                                {% else %}
+                                <span class="badge-custom badge-warning">Chưa nộp</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <a href="{{ url_for('submit_assignment', assignment_id=assignment.id) }}" class="btn btn-sm btn-primary-custom">
+                                <i class="bi bi-upload"></i> Nộp bài
+                            </a>
+                            <a href="{{ url_for('assignments', course_id=course.id) }}" class="btn btn-sm btn-outline-custom">
+                                <i class="bi bi-eye"></i> Xem chi tiết
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted">Chưa có bài tập nào.</p>
+                {% endif %}
+            </div>
+            
+            <!-- Thảo luận -->
+            <div id="discussion" class="card-soft">
+                <h4 class="title-gradient mb-3"><i class="bi bi-chat-dots"></i> Thảo luận với giáo viên</h4>
+                
+                <!-- Form thảo luận -->
+                <form method="POST" action="{{ url_for('add_discussion', course_id=course.id) }}" class="mb-4">
+                    <div class="mb-2">
+                        <textarea class="form-control" name="noi_dung" rows="3" placeholder="Đặt câu hỏi hoặc chia sẻ ý kiến..." required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary-custom">
+                        <i class="bi bi-send"></i> Gửi
+                    </button>
+                </form>
+                
+                <!-- Danh sách thảo luận -->
+                {% if discussions %}
+                <div class="border-top pt-3">
+                    {% for d in discussions %}
+                    <div class="mb-3 pb-3 border-bottom">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <strong class="text-brand-sky">
+                                    {{ d.ho_ten }}
+                                    {% if d.role == 'teacher' %}
+                                    <span class="badge-custom badge-success small">Giáo viên</span>
+                                    {% endif %}
+                                </strong>
+                                <small class="text-muted ms-2">{{ d.created_at.strftime('%d/%m/%Y %H:%M') }}</small>
+                            </div>
+                        </div>
+                        <p class="mb-0">{{ d.noi_dung }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted">Chưa có thảo luận nào. Hãy bắt đầu cuộc trò chuyện!</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
