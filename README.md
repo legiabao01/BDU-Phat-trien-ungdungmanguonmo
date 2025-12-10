@@ -1,42 +1,90 @@
-# Ứng dụng Học Trực Tuyến
+# 🎓 Ứng dụng Học Trực Tuyến
 
 Dự án cuối kỳ môn **Phát triển ứng dụng mã nguồn mở**
 
-## 📋 Mô tả
+## 📋 Tổng quan
 
-Hệ thống quản lý học trực tuyến với đầy đủ chức năng cho học viên, giáo viên và quản trị viên.
+Hệ thống học trực tuyến với đầy đủ chức năng cho học viên, giáo viên và quản trị viên. Hỗ trợ video bài giảng, bài tập, thảo luận, theo dõi tiến độ và cấp chứng nhận.
+
+## 🎯 Tình hình hiện tại
+
+### ✅ Đã hoàn thành
+
+**Backend:**
+- ✅ FastAPI + PostgreSQL + JWT authentication
+- ✅ API đăng ký khóa học (Enrollment)
+- ✅ API bài tập (Assignments) - tạo, nộp, chấm điểm
+- ✅ API thảo luận (Discussion Forum)
+- ✅ API chứng nhận (Certificates)
+- ✅ API theo dõi tiến độ (Progress Tracking)
+- ✅ Quản lý người dùng (User management)
+
+**Frontend:**
+- ✅ React + Vite + Bootstrap 5
+- ✅ Đã migrate UI từ Flask templates
+- ✅ Trang danh sách khóa học (có search/filter)
+- ✅ Trang học tập với lesson tree, video player
+- ✅ Trang bài tập với file upload
+- ✅ Forum thảo luận
+- ✅ Trang chứng nhận
+- ✅ Dashboard cho Student/Teacher/Admin
+
+**Database:**
+- ✅ Đã seed 4 khóa học lập trình:
+  - Python Cơ Bản (8 bài học)
+  - JavaScript Full Stack (8 bài học)
+  - Web Development Cơ Bản (5 bài học)
+  - Data Science với Python (5 bài học)
+
+**Tính năng:**
+- ✅ Video player (YouTube, Vimeo, HTML5)
+- ✅ Drip content (bài học locked/unlocked)
+- ✅ Progress tracking với progress bar
+- ✅ File upload cho bài tập
+- ✅ Real-time discussion forum
+
+### 🔄 Đang phát triển
+
+- [ ] Payment integration
+- [ ] Email notifications
+- [ ] Video streaming optimization
+- [ ] Mobile responsive improvements
 
 ## 🛠️ Công nghệ sử dụng
 
-### Backend chính (Flask - Legacy)
-- **Backend**: Python Flask
-- **Frontend**: Jinja2 Templates, HTML, CSS, JavaScript
-- **Database**: MySQL
-- **Authentication**: Session-based với password hashing
+### Backend
+- **Framework:** FastAPI
+- **Database:** PostgreSQL
+- **Authentication:** JWT (JSON Web Tokens)
+- **ORM:** SQLAlchemy
+- **Validation:** Pydantic
 
-### API Backend (FastAPI - Mới)
-- **Backend API**: FastAPI với PostgreSQL
-- **Database**: PostgreSQL
-- **Authentication**: JWT (JSON Web Tokens)
-- **API Documentation**: Swagger UI tại `/docs`
+### Frontend
+- **Framework:** React 18
+- **Build tool:** Vite
+- **UI:** Bootstrap 5 + Custom CSS
+- **HTTP Client:** Axios
+- **Routing:** React Router DOM
 
-### Frontend (React - Mới)
-- **Framework**: React 18 + Vite
-- **Routing**: React Router DOM
-- **HTTP Client**: Axios
-- **State Management**: Context API
-- **UI**: Custom CSS (responsive)
+## 🚀 Cách chạy dự án
 
-## 📦 Cài đặt
+### Yêu cầu
 
-### 1. Clone repository
+- Python 3.8+
+- Node.js 16+
+- PostgreSQL 12+
+- Git
+
+### Bước 1: Clone repository
 
 ```bash
-git clone <your-repo-url>
-cd Webhoctructuyen
+git clone https://github.com/legiabao01/BDU-Phat-trien-ungdungmanguonmo.git
+cd BDU-Phat-trien-ungdungmanguonmo
 ```
 
-### 2. Tạo môi trường ảo
+### Bước 2: Setup Backend
+
+#### 2.1. Tạo virtual environment
 
 ```bash
 python -m venv venv
@@ -48,298 +96,248 @@ venv\Scripts\activate
 source venv/bin/activate
 ```
 
-### 3. Cài đặt dependencies
+#### 2.2. Cài đặt dependencies
 
 ```bash
-pip install -r requirements.txt
+pip install -r fastapi_app/requirements.txt
 ```
 
-### 4. Cấu hình Database
+#### 2.3. Cấu hình database
 
-1. Tạo database MySQL:
-```sql
-mysql -u root -p < database/schema.sql
-```
-
-2. Tạo file `.env` từ `.env.example`:
+1. **Tạo database và user** (nếu chưa có):
 ```bash
-cp .env.example .env
-```
-
-3. Chỉnh sửa file `.env` với thông tin MySQL của bạn:
-```
-MYSQL_HOST=localhost
-MYSQL_USER=root
-MYSQL_PASSWORD=your_password
-MYSQL_DB=webhoctructuyen
-```
-
-### 5. Chạy ứng dụng Flask (Legacy)
-
-```bash
-python app.py
-```
-
-Truy cập: http://localhost:5000
-
-### 6. Chạy FastAPI Backend (Mới)
-
-1. **Cài đặt PostgreSQL** và tạo database:
-```bash
-# Tạo database và user
 psql -U postgres
+```
+
+```sql
 CREATE DATABASE elearning;
-CREATE USER elearn WITH PASSWORD 'elearn123';
+CREATE USER elearn WITH PASSWORD 'your_password';
 GRANT ALL PRIVILEGES ON DATABASE elearning TO elearn;
 \q
 ```
 
-2. **Chạy schema PostgreSQL**:
+2. **Tạo bảng** (từ thư mục root):
 ```bash
 psql -U elearn -d elearning -f database/schema_pg.sql
 ```
 
-3. **Cấu hình environment**:
+3. **Tạo bảng enrollment**:
+```bash
+psql -U elearn -d elearning -f database/create_enrollment_table.sql
+```
+
+4. **Seed dữ liệu**:
+```bash
+psql -U elearn -d elearning -f database/seed_programming_courses_fixed_utf8.sql
+```
+
+**Hoặc dùng script tự động:**
+```powershell
+.\setup-database.ps1
+```
+
+#### 2.4. Tạo file `.env`
+
 Tạo file `fastapi_app/.env`:
+
 ```env
-DATABASE_URL=postgresql+psycopg://elearn:elearn123@localhost:5432/elearning
+DATABASE_URL=postgresql+psycopg://elearn:your_password@localhost:5432/elearning
 JWT_SECRET=your-secret-key-here-change-in-production
 JWT_ALG=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
-REFRESH_TOKEN_EXPIRE_MINUTES=10080
-ALLOWED_ORIGINS=["http://localhost:3000","http://127.0.0.1:3000"]
+REFRESH_TOKEN_EXPIRE_MINUTES=1440
+ALLOWED_ORIGINS=http://localhost:3000
 ```
 
-4. **Cài đặt dependencies FastAPI**:
-```bash
-pip install -r fastapi_app/requirements.txt
-pip install email-validator bcrypt==3.2.2
-```
+#### 2.5. Chạy Backend
 
-5. **Chạy server** (QUAN TRỌNG: từ thư mục root):
 ```bash
-# Đảm bảo đã activate venv
-.\venv\Scripts\Activate.ps1  # Windows PowerShell
-# hoặc
-venv\Scripts\activate.bat     # Windows CMD
-
-# Chạy từ thư mục root (không phải từ trong fastapi_app)
+# Từ thư mục root (QUAN TRỌNG!)
 uvicorn fastapi_app.main:app --reload --port 8001
 ```
 
-Hoặc dùng script:
-```bash
-.\fastapi_app\run.ps1  # PowerShell
-.\fastapi_app\run.bat  # CMD
+**Hoặc dùng script:**
+```powershell
+.\fastapi_app\run.ps1
 ```
 
-6. **Truy cập**:
-- API Docs (Swagger): http://127.0.0.1:8001/docs
-- Health check: http://127.0.0.1:8001/health
+Backend sẽ chạy tại: `http://127.0.0.1:8001`
+API docs: `http://127.0.0.1:8001/docs`
 
-### 7. Seed dữ liệu mẫu (PostgreSQL)
+### Bước 3: Setup Frontend
 
-```bash
-psql -U elearn -d elearning -f database/seed_courses.sql
-```
+#### 3.1. Cài đặt dependencies
 
-**Kiểm tra dữ liệu**: Mở Swagger tại `/docs` và gọi `GET /api/courses`
-
-### 8. Chạy Frontend React (Mới)
-
-1. **Cài đặt dependencies**:
 ```bash
 cd frontend
 npm install
 ```
 
-2. **Chạy development server**:
+#### 3.2. Chạy Frontend
+
 ```bash
 npm run dev
 ```
 
 Frontend sẽ chạy tại: `http://localhost:3000`
 
-**Lưu ý**: Cần chạy cả Backend FastAPI (port 8001) và Frontend React (port 3000) cùng lúc.
+### Bước 4: Chạy cả 2 server cùng lúc (Khuyến nghị)
 
-## 👥 Tài khoản mặc định
+```powershell
+# Windows PowerShell
+.\start-dev.ps1
 
-- **Admin**: admin@example.com / admin123
-- **Teacher**: teacher@example.com / teacher123
+# Windows CMD
+start-dev.bat
+```
 
-## 🔌 FastAPI Endpoints
-
-### Authentication
-- `POST /api/auth/register` - Đăng ký user mới
-- `POST /api/auth/login` - Đăng nhập (nhận JWT token)
-  - Hỗ trợ form (username/password) hoặc JSON (email/password)
-- `GET /api/users/me` - Lấy thông tin user hiện tại (cần Bearer token)
-
-### Courses
-- `GET /api/courses` - Lấy danh sách khóa học
-- `GET /api/courses/{course_id}` - Lấy chi tiết khóa học
-- `POST /api/courses` - Tạo khóa học mới
-- `GET /api/courses/{course_id}/lessons` - Lấy danh sách bài học
-- `POST /api/courses/{course_id}/lessons` - Tạo bài học mới (với file upload)
-
-### Progress Tracking
-- `POST /api/courses/{course_id}/progress` - Cập nhật tiến độ học tập
-- `GET /api/courses/{course_id}/progress` - Lấy tiến độ học tập
-- `GET /api/users/me/progress` - Lấy tất cả progress của user
-
-### Certificates
-- `GET /api/courses/{course_id}/certificate` - Lấy chứng nhận hoàn thành
-- `POST /api/courses/{course_id}/complete` - Đánh dấu hoàn thành khóa học
-
-### Discussions
-- `GET /api/courses/{course_id}/discussions` - Lấy danh sách thảo luận
-- `POST /api/courses/{course_id}/discussions` - Tạo thảo luận mới
-
-### Health Check
-- `GET /health` - Kiểm tra trạng thái server
-
-**Lưu ý**: 
-- Sử dụng Swagger UI tại `/docs` để test API
-- Authorize với Bearer token: Nhấn nút "Authorize" → chọn "BearerAuth" → dán token
+Script sẽ tự động chạy cả Backend và Frontend trong các cửa sổ riêng.
 
 ## 📁 Cấu trúc dự án
 
 ```
-Webhoctructuyen/
-├── app.py                 # File chính Flask (legacy)
-├── requirements.txt       # Dependencies Flask
-├── .env.example          # Mẫu file cấu hình
-├── .gitignore            # Git ignore file
-├── README.md             # File này
-├── database/
-│   ├── schema.sql        # MySQL schema (legacy)
-│   ├── schema_pg.sql     # PostgreSQL schema (FastAPI)
-│   └── seed_courses.sql  # Seed data mẫu
-├── fastapi_app/          # FastAPI Backend (mới)
-│   ├── main.py          # Entry point FastAPI
-│   ├── requirements.txt  # Dependencies FastAPI
-│   ├── .env             # Environment variables
-│   ├── core/            # Core config, security
-│   ├── db/              # Database session, base
-│   ├── models/          # SQLAlchemy models
-│   ├── schemas/         # Pydantic schemas
-│   └── api/
-│       └── routes/      # API routes
-├── frontend/            # React Frontend (mới)
-│   ├── package.json     # Dependencies
-│   ├── vite.config.js   # Vite config
-│   ├── index.html       # HTML entry
-│   └── src/
-│       ├── main.jsx     # React entry
-│       ├── App.jsx      # Root component
-│       ├── pages/       # Page components
-│       ├── components/  # Reusable components
-│       └── context/     # Context API (Auth)
-├── templates/            # Jinja2 templates (Flask)
-│   ├── index.html
-│   ├── courses.html
-│   ├── course_detail.html
-│   ├── login.html
-│   ├── register.html
-│   ├── student/
-│   ├── teacher/
-│   └── admin/
-├── static/               # Static files
-│   ├── css/
-│   ├── js/
-│   └── images/
-└── uploads/             # Uploaded files
+BDU-Phat-trien-ungdungmanguonmo/
+├── fastapi_app/              # Backend FastAPI
+│   ├── main.py              # Entry point
+│   ├── requirements.txt     # Python dependencies
+│   ├── .env                 # Environment variables
+│   ├── core/                # Config, security
+│   ├── db/                  # Database session
+│   ├── models/              # SQLAlchemy models
+│   ├── schemas/             # Pydantic schemas
+│   └── api/routes/          # API endpoints
+│
+├── frontend/                # Frontend React
+│   ├── src/
+│   │   ├── pages/           # Page components
+│   │   ├── components/      # Reusable components
+│   │   ├── context/         # Context API (Auth)
+│   │   └── styles/          # CSS files
+│   ├── package.json
+│   └── vite.config.js
+│
+├── database/                # SQL scripts
+│   ├── schema_pg.sql        # Database schema
+│   ├── create_enrollment_table.sql
+│   └── seed_programming_courses_fixed_utf8.sql
+│
+├── templates/               # Flask templates (legacy)
+├── static/                  # Static files (legacy)
+├── app.py                   # Flask app (legacy)
+│
+├── setup-database.ps1       # Auto setup database
+├── start-dev.ps1            # Run both servers
+└── README.md                # File này
 ```
 
-## ✅ Tính năng đã hoàn thành
+## 🔌 API Endpoints chính
 
-### Backend (FastAPI)
-- ✅ Authentication với JWT (Register/Login)
-- ✅ CRUD Courses và Lessons
-- ✅ File Upload cho video bài học
-- ✅ Progress Tracking API
-- ✅ Certificates API
-- ✅ Discussion Forum API
-- ✅ Swagger UI documentation
+### Authentication
+- `POST /api/auth/register` - Đăng ký
+- `POST /api/auth/login` - Đăng nhập (nhận JWT token)
+- `GET /api/users/me` - Thông tin user hiện tại
 
-### Frontend (React)
-- ✅ Login/Register với JWT
-- ✅ Danh sách khóa học
-- ✅ Chi tiết khóa học với Lesson Tree
-- ✅ Video Player (YouTube, Vimeo, HTML5)
-- ✅ Drip Content (locked/unlocked lessons)
-- ✅ Responsive design
+### Courses
+- `GET /api/courses` - Danh sách khóa học
+- `GET /api/courses/{id}` - Chi tiết khóa học
+- `POST /api/courses` - Tạo khóa học (teacher/admin)
+- `GET /api/courses/{id}/lessons` - Danh sách bài học
 
-## 🚀 Chức năng nâng cao (Đang phát triển)
+### Enrollment
+- `POST /api/courses/{id}/enroll` - Đăng ký khóa học
+- `GET /api/users/me/enrollments` - Khóa học đã đăng ký
+- `GET /api/courses/{id}/enrollment` - Kiểm tra đã đăng ký
 
-### 1. Hệ thống đánh giá và phản hồi (0.5 điểm)
-- Học viên có thể đánh giá khóa học (1-5 sao)
-- Xem đánh giá của các học viên khác
-- Tính điểm trung bình tự động
+### Assignments
+- `GET /api/courses/{id}/assignments` - Danh sách bài tập
+- `POST /api/courses/{id}/assignments` - Tạo bài tập (teacher)
+- `POST /api/assignments/{id}/submit` - Nộp bài
+- `POST /api/submissions/{id}/grade` - Chấm bài (teacher)
 
-### 2. Quản lý bài tập và nộp bài (0.5 điểm)
-- Giáo viên tạo bài tập cho khóa học
-- Học viên nộp bài và xem điểm
-- Giáo viên chấm điểm và nhận xét
+### Discussion
+- `GET /api/courses/{id}/discussions` - Danh sách thảo luận
+- `POST /api/courses/{id}/discussions` - Tạo thảo luận
 
-### 3. Hệ thống thông báo (0.5 điểm)
-- Thông báo hệ thống
-- Thông báo theo khóa học
-- Thông báo về bài tập mới
+### Progress & Certificates
+- `POST /api/courses/{id}/progress` - Cập nhật tiến độ
+- `GET /api/courses/{id}/progress` - Lấy tiến độ
+- `GET /api/courses/{id}/certificate` - Lấy chứng nhận
 
-## 📝 Hướng dẫn sử dụng Git
+**Xem đầy đủ API tại:** `http://127.0.0.1:8001/docs`
 
-### 1. Khởi tạo Git repository
+## 👥 Tài khoản mẫu
 
-```bash
-git init
-```
+### Giáo viên
+- Email: `teacher1@example.com` hoặc `teacher2@example.com`
+- Password: `teacher123`
 
-### 2. Thêm remote repository (GitHub)
+### Học viên
+- Tạo tài khoản mới qua trang đăng ký
 
-```bash
-git remote add origin https://github.com/your-username/your-repo-name.git
-```
+## 🧪 Test ứng dụng
 
-### 3. Commit và push code
+1. **Mở Frontend:** `http://localhost:3000`
+2. **Đăng ký/Đăng nhập** tài khoản mới
+3. **Xem danh sách khóa học** (4 khóa học lập trình)
+4. **Đăng ký khóa học** → Click "Đăng ký khóa học"
+5. **Vào học** → Click "Vào học" → Xem video, làm bài tập
+6. **Tham gia thảo luận** → Tab "Thảo luận"
+7. **Xem Dashboard** → `/dashboard` (tự động chọn theo role)
 
-```bash
-# Thêm tất cả file
-git add .
+## 📝 Lưu ý quan trọng
 
-# Commit với message
-git commit -m "Initial commit: Ứng dụng học trực tuyến"
+### Chạy Backend
+- **PHẢI chạy từ thư mục root**, không phải từ trong `fastapi_app`
+- Lệnh đúng: `uvicorn fastapi_app.main:app --reload --port 8001`
+- Lệnh sai: `cd fastapi_app && uvicorn main:app ...` ❌
 
-# Push lên GitHub
-git branch -M main
-git push -u origin main
-```
+### Database
+- Đảm bảo PostgreSQL đang chạy
+- Kiểm tra password của user `elearn` trong `.env`
+- Nếu lỗi encoding, dùng file `seed_programming_courses_fixed_utf8.sql`
 
-### 4. Các lệnh Git thường dùng
+### Frontend
+- Cần chạy Backend trước (port 8001)
+- Frontend tự động proxy API requests đến Backend
 
-```bash
-# Xem trạng thái
-git status
+## 🐛 Troubleshooting
 
-# Xem lịch sử commit
-git log
+### Backend không chạy được
+- Kiểm tra PostgreSQL đang chạy: `psql -U postgres`
+- Kiểm tra `.env` file có đúng không
+- Kiểm tra virtual environment đã activate chưa
 
-# Tạo branch mới
-git checkout -b feature/new-feature
+### Frontend không kết nối được Backend
+- Đảm bảo Backend đang chạy ở port 8001
+- Kiểm tra CORS settings trong `fastapi_app/main.py`
+- Kiểm tra proxy trong `frontend/vite.config.js`
 
-# Merge branch
-git merge feature/new-feature
+### Lỗi "psql: command not found"
+- Dùng full path: `"C:\Program Files\PostgreSQL\16\bin\psql.exe"`
+- Hoặc thêm PostgreSQL vào PATH
 
-# Pull code mới nhất
-git pull origin main
-```
+## 📚 Tài liệu tham khảo
+
+- [FastAPI Documentation](https://fastapi.tiangolo.com/)
+- [React Documentation](https://react.dev/)
+- [PostgreSQL Documentation](https://www.postgresql.org/docs/)
+
+## 👨‍💻 Đóng góp
+
+1. Fork project
+2. Tạo feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to branch (`git push origin feature/AmazingFeature`)
+5. Tạo Pull Request
 
 ## 📄 License
 
 MIT License
 
-## 👨‍💻 Tác giả
+## 👥 Team
 
 Nhóm sinh viên - Môn Phát triển ứng dụng mã nguồn mở
 
+---
 
+**Cần hỗ trợ?** Xem thêm trong thư mục `docs/`

@@ -4,32 +4,21 @@ __pycache__/
 *$py.class
 *.so
 .Python
-env/
 venv/
+env/
 ENV/
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
+.venv
 
-# Flask
-instance/
-.webassets-cache
+# FastAPI
+fastapi_app/.env
+fastapi_app/__pycache__/
+fastapi_app/**/__pycache__/
 
-# Environment variables
-.env
-.env.local
+# Node
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
 
 # IDE
 .vscode/
@@ -44,9 +33,22 @@ Thumbs.db
 
 # Logs
 *.log
+logs/
 
-# Uploads
-uploads/
-static/uploads/
+# Database
+*.db
+*.sqlite
 
+# Uploads (giữ lại structure nhưng ignore nội dung)
+static/uploads/*
+!static/uploads/.gitkeep
 
+# Temporary files
+*.tmp
+*.bak
+.gitmessage.txt
+
+# Flask legacy (có thể xóa sau)
+# app.py
+# templates/
+# static/ (trừ uploads)
