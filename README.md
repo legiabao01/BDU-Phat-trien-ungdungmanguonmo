@@ -104,6 +104,8 @@ pip install -r fastapi_app/requirements.txt
 
 #### 2.3. Cấu hình database
 
+> 📖 **Xem chi tiết**: `docs/DATABASE_SETUP.md` - Hướng dẫn đầy đủ về các file SQL
+
 1. **Tạo database và user** (nếu chưa có):
 ```bash
 psql -U postgres
@@ -118,6 +120,10 @@ GRANT ALL PRIVILEGES ON DATABASE elearning TO elearn;
 
 2. **Tạo bảng** (từ thư mục root):
 ```bash
+# Cách 1: Chạy tự động (KHUYẾN NGHỊ)
+.\scripts\setup-all-migrations.ps1
+
+# Cách 2: Chạy thủ công
 psql -U elearn -d elearning -f database/schema_pg.sql
 ```
 

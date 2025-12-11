@@ -32,6 +32,8 @@ cp fastapi_app/env.example fastapi_app/.env
 
 ### 3. Setup Database
 
+> 📖 **Xem chi tiết**: `docs/DATABASE_SETUP.md`
+
 ```powershell
 # Tạo database và user
 psql -U postgres
@@ -40,8 +42,11 @@ CREATE USER elearn WITH PASSWORD 'your_password';
 GRANT ALL PRIVILEGES ON DATABASE elearning TO elearn;
 \q
 
-# Chạy schema và seed data
-.\setup-database.ps1
+# Chạy TẤT CẢ migrations (BẮT BUỘC)
+.\scripts\setup-all-migrations.ps1
+
+# Chạy seed data (TÙY CHỌN - để test)
+.\scripts\setup-database.ps1
 ```
 
 ### 4. Setup Frontend

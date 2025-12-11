@@ -26,6 +26,11 @@
 
 ### 1. **Bài tập code tự chấm với test case** ⚠️ CHƯA CÓ
 - **Mô tả**: Học viên nộp code, hệ thống tự động chạy test cases và chấm điểm
+- **Cách hoạt động**:
+  1. Giáo viên tạo bài tập với test cases (input/output expected)
+  2. Học viên nộp code (Python/JS/C++/Java)
+  3. Hệ thống chạy code với từng test case
+  4. Tự động chấm điểm dựa trên số test case pass
 - **Công nghệ đề xuất**: 
   - Judge0 API (https://judge0.com/) - miễn phí có giới hạn
   - Hoặc tự build sandbox với Docker
