@@ -12,3 +12,5 @@ class Certificate(Base):
     certificate_code = Column(String(100), unique=True, nullable=False)
     issued_at = Column(DateTime(timezone=True), server_default=func.now())
 
+
+

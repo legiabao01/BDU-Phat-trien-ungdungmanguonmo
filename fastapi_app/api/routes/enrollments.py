@@ -34,20 +34,10 @@ def enroll_course(
         )
     
     # Kiểm tra đã đăng ký chưa
-    try:
-        existing = db.query(Enrollment).filter(
-            Enrollment.user_id == current_user.id,
-            Enrollment.khoa_hoc_id == course_id
-        ).first()
-    except Exception as e:
-        # Nếu bảng chưa tồn tại, tạo bảng và thử lại
-        from ...db.base import Base
-        from ...db.session import engine
-        Base.metadata.create_all(bind=engine, tables=[Enrollment.__table__])
-        existing = db.query(Enrollment).filter(
-            Enrollment.user_id == current_user.id,
-            Enrollment.khoa_hoc_id == course_id
-        ).first()
+    existing = db.query(Enrollment).filter(
+        Enrollment.user_id == current_user.id,
+        Enrollment.khoa_hoc_id == course_id
+    ).first()
     
     if existing:
         if existing.trang_thai == "cancelled":

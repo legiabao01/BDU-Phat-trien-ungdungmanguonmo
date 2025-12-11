@@ -113,3 +113,5 @@ def mark_course_complete(
         "certificate_code": certificate.certificate_code
     }
 
+
+

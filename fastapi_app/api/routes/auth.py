@@ -32,23 +32,10 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/auth/login", response_model=Token)
-def login(
-    form_data: Optional[OAuth2PasswordRequestForm] = Depends(None),
-    payload: Optional[LoginRequest] = Body(None),
-    db: Session = Depends(get_db),
-):
-    # Hỗ trợ cả form (Swagger Authorize) và JSON body (LoginRequest)
-    username = None
-    password = None
-    if form_data:
-        username = form_data.username
-        password = form_data.password
-    elif payload:
-        username = payload.email
-        password = payload.password
-
-    if not username or not password:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Thiếu username/email hoặc password")
+def login(payload: LoginRequest = Body(...), db: Session = Depends(get_db)):
+    # Nhận JSON body: { "email": "...", "password": "..." }
+    username = payload.email
+    password = payload.password
 
     user = db.query(User).filter(User.email == username).first()
     if not user or not verify_password(password, user.password_hash):

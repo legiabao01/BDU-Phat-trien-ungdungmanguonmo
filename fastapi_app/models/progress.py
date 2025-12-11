@@ -14,3 +14,5 @@ class Progress(Base):
     progress_percentage = Column(Float, default=0.0)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
+
+

@@ -151,3 +151,5 @@ INSERT INTO chi_tiet_khoa_hoc (khoa_hoc_id, tieu_de_muc, noi_dung, thu_tu, video
 SELECT id, 'NumPy - Tinh Toan So Hoc', 'Arrays, operations, broadcasting, linear algebra.', 2, NULL, true, NOW() + INTERVAL '1 day'
 FROM khoa_hoc WHERE tieu_de LIKE 'Data Science%';
 
+
+

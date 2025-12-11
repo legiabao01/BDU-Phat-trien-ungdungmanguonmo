@@ -33,3 +33,5 @@ Write-Host "   - Backend API: http://127.0.0.1:8001" -ForegroundColor White
 Write-Host "   - API Docs: http://127.0.0.1:8001/docs" -ForegroundColor White
 Write-Host "`n💡 Để dừng server, đóng các cửa sổ PowerShell đã mở" -ForegroundColor Gray
 
+
+

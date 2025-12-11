@@ -36,3 +36,5 @@ class Submission(Base):
     assignment = relationship("Assignment", backref="submissions")
     user = relationship("User", backref="submissions")
 
+
+

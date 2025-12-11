@@ -8,7 +8,6 @@ import LearnPage from './pages/LearnPage'
 import StudentDashboard from './pages/StudentDashboard'
 import TeacherDashboard from './pages/TeacherDashboard'
 import AdminDashboard from './pages/AdminDashboard'
-import Assignments from './pages/Assignments'
 import Certificate from './pages/Certificate'
 import Layout from './components/Layout'
 import { AuthProvider } from './context/AuthContext'
@@ -42,7 +41,6 @@ function App() {
             <Route path="courses" element={<Courses />} />
             <Route path="courses/:id" element={<CourseDetail />} />
             <Route path="learn/:id" element={<LearnPage />} />
-            <Route path="assignments/:id" element={<Assignments />} />
             <Route path="certificate/:id" element={<Certificate />} />
             <Route path="dashboard" element={<DashboardRouter />} />
           </Route>

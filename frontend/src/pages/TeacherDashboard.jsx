@@ -133,7 +133,7 @@ export default function TeacherDashboard() {
                         <i className="bi bi-eye"></i> Xem
                       </Link>
                       <Link
-                        to={`/assignments/${course.id}`}
+                        to={`/learn/${course.id}?tab=assignments`}
                         className="btn btn-sm btn-outline-custom"
                       >
                         <i className="bi bi-file-earmark-check"></i> Bài tập

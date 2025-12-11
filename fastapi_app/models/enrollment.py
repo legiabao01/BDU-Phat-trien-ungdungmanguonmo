@@ -24,3 +24,5 @@ class Enrollment(Base):
     user = relationship("User", backref="enrollments")
     course = relationship("Course", backref="enrollments")
 
+
+

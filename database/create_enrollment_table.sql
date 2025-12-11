@@ -12,3 +12,5 @@ CREATE TABLE IF NOT EXISTS dang_ky_khoa_hoc (
 CREATE INDEX IF NOT EXISTS idx_enrollment_user ON dang_ky_khoa_hoc(user_id);
 CREATE INDEX IF NOT EXISTS idx_enrollment_course ON dang_ky_khoa_hoc(khoa_hoc_id);
 
+
+

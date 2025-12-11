@@ -1,14 +1,17 @@
 from datetime import datetime, timedelta
 from typing import Optional
 
-from fastapi import HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi import HTTPException, status, Depends
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer, OAuth2PasswordBearer
 from jose import jwt, JWTError
 from passlib.context import CryptContext
 
 from .config import settings
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Use HTTP Bearer so Swagger "Authorize" with Bearer token works consistently
+bearer_scheme = HTTPBearer(auto_error=True)
+# Keep OAuth2PasswordBearer for existing dependency imports
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 
@@ -38,4 +41,11 @@ def decode_token(token: str) -> str:
             detail="Invalid or expired token",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+
+def get_token_from_header(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)) -> str:
+    """
+    Extract raw token string from Authorization header.
+    """
+    return credentials.credentials
 
