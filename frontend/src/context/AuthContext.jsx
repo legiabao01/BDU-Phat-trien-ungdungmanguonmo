@@ -28,7 +28,9 @@ export const AuthProvider = ({ children }) => {
   const fetchUser = async () => {
     try {
       const response = await axios.get('/api/users/me')
-      setUser(response.data)
+      const data = response.data || {}
+      // Map role -> vai_tro để router/dashboard hoạt động đúng
+      setUser({ ...data, vai_tro: data.role || data.vai_tro })
     } catch (error) {
       console.error('Failed to fetch user:', error)
       logout()
@@ -78,4 +80,6 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   )
 }
+
+
 

@@ -11,7 +11,7 @@ export default function Courses() {
   const [search, setSearch] = useState('')
   const [level, setLevel] = useState('')
   const [mode, setMode] = useState('')
-  const [sort, setSort] = useState('new')
+  const [sort, setSort] = useState('newest')
 
   useEffect(() => {
     fetchCourses()
@@ -21,11 +21,11 @@ export default function Courses() {
     try {
       setLoading(true)
       const params = new URLSearchParams()
-      if (search) params.append('search', search)
-      if (level) params.append('level', level)
-      if (mode) params.append('mode', mode)
+      if (search) params.append('q', search)
+      if (level) params.append('cap_do', level)
+      if (mode) params.append('hinh_thuc', mode)
       if (sort) params.append('sort', sort)
-      
+
       const response = await axios.get(`/api/courses?${params.toString()}`)
       setCourses(response.data)
       setError('')
@@ -125,9 +125,7 @@ export default function Courses() {
                 handleFilterChange()
               }}
             >
-              <option value="new">Mới nhất</option>
-              <option value="popular">Nhiều học viên</option>
-              <option value="rating">Đánh giá cao</option>
+              <option value="newest">Mới nhất</option>
               <option value="price_asc">Giá tăng dần</option>
               <option value="price_desc">Giá giảm dần</option>
             </select>
