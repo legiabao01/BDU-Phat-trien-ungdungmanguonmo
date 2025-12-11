@@ -125,6 +125,7 @@ export default function Login() {
                   </Link>
                 </div>
               </form>
+              </div>
             </div>
           </div>
         </div>

@@ -168,6 +168,7 @@ export default function Register() {
                   </Link>
                 </div>
               </form>
+              </div>
             </div>
           </div>
         </div>
