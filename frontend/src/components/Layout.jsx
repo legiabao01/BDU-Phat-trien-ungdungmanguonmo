@@ -60,7 +60,7 @@ export default function Layout() {
                 {user ? (
                   <>
                     <li className="nav-item">
-                      <Link className="nav-link text-brand-sky" to="/dashboard">
+                      <Link className="nav-link text-brand-sky" to="/profile">
                         <i className="bi bi-person-circle"></i> {user.ho_ten}
                       </Link>
                     </li>

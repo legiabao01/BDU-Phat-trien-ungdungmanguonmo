@@ -33,6 +33,98 @@ def get_me(current_user: User = Depends(deps.get_current_active_user)):
     return current_user
 
 
+@router.put("/users/me", response_model=UserOut)
+def update_me(
+    payload: UserUpdate = Body(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_active_user)
+):
+    """Cập nhật thông tin cá nhân"""
+    if payload.ho_ten:
+        current_user.ho_ten = payload.ho_ten
+    if payload.email:
+        # Kiểm tra email trùng
+        existing = db.query(User).filter(User.email == payload.email, User.id != current_user.id).first()
+        if existing:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email đã tồn tại")
+        current_user.email = payload.email
+    if payload.so_dien_thoai is not None:
+        current_user.so_dien_thoai = payload.so_dien_thoai
+    
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+
+class PasswordChange(BaseModel):
+    old_password: str
+    new_password: str
+
+
+@router.post("/users/me/change-password")
+def change_password(
+    payload: PasswordChange = Body(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_active_user)
+):
+    """Đổi mật khẩu"""
+    from ...core.security import verify_password
+    
+    if not verify_password(payload.old_password, current_user.password_hash):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Mật khẩu cũ không đúng")
+    
+    current_user.password_hash = hash_password(payload.new_password)
+    db.commit()
+    return {"message": "Đổi mật khẩu thành công"}
+
+
+@router.get("/users/me/history")
+def get_learning_history(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_active_user)
+):
+    """Lấy lịch sử học tập"""
+    from ...models.enrollment import Enrollment
+    from ...models.progress import Progress
+    from ...models.course import Course
+    
+    # Lấy các khóa học đã đăng ký
+    enrollments = db.query(Enrollment).filter(
+        Enrollment.user_id == current_user.id,
+        Enrollment.trang_thai == 'active'
+    ).all()
+    
+    # Lấy tiến độ học tập
+    progress_list = db.query(Progress).filter(
+        Progress.user_id == current_user.id
+    ).all()
+    
+    # Tổng hợp dữ liệu
+    courses_data = []
+    for enrollment in enrollments:
+        course = db.query(Course).filter(Course.id == enrollment.khoa_hoc_id).first()
+        if course:
+            # Tính tiến độ
+            course_progress = [p for p in progress_list if p.khoa_hoc_id == course.id]
+            completed_lessons = len([p for p in course_progress if p.completed])
+            total_lessons = len(course.contents) if hasattr(course, 'contents') else 0
+            progress_percentage = (completed_lessons / total_lessons * 100) if total_lessons > 0 else 0
+            
+            courses_data.append({
+                "course_id": course.id,
+                "course_title": course.tieu_de,
+                "enrollment_date": enrollment.ngay_dang_ky.isoformat() if enrollment.ngay_dang_ky else None,
+                "progress_percentage": round(progress_percentage, 1),
+                "completed_lessons": completed_lessons,
+                "total_lessons": total_lessons
+            })
+    
+    return {
+        "total_courses": len(courses_data),
+        "courses": courses_data
+    }
+
+
 @router.get("/users/{user_id}", response_model=UserOut)
 def get_user(user_id: int, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.id == user_id).first()

@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import QuizSection from '../components/QuizSection'
 import QuizCreator from '../components/QuizCreator'
 import LessonResourcesEditor from '../components/LessonResourcesEditor'
+import VideoPlayer from '../components/VideoPlayer'
 
 // Discussion Section Component
 function DiscussionSection({ courseId, teacher }) {
@@ -797,30 +798,15 @@ export default function LearnPage() {
 
                                 {isSelected && videoUrl && (
                                   <div className="mb-3">
-                                    <div className="ratio ratio-16x9">
-                                      {videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be') ? (
-                                        <iframe
-                                          src={videoUrl}
-                                          frameBorder="0"
-                                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                          allowFullScreen
-                                        ></iframe>
-                                      ) : videoUrl.includes('vimeo.com') ? (
-                                        <iframe
-                                          src={videoUrl}
-                                          frameBorder="0"
-                                          allow="autoplay; fullscreen; picture-in-picture"
-                                          allowFullScreen
-                                        ></iframe>
-                                      ) : (
-                                        <video controls className="w-100 rounded shadow-sm" style={{ maxHeight: '500px' }}>
-                                          <source src={videoUrl} type="video/mp4" />
-                                          Trình duyệt của bạn không hỗ trợ video tag.
-                                        </video>
-                                      )}
-                                    </div>
+                                    <VideoPlayer 
+                                      videoUrl={videoUrl}
+                                      videoPath={lesson.video_path}
+                                      onTimeUpdate={(time) => {
+                                        // Có thể lưu tiến độ xem video ở đây
+                                      }}
+                                    />
                                     {lesson.video_duration && (
-                                      <small className="text-muted">
+                                      <small className="text-muted mt-2 d-block">
                                         <i className="bi bi-clock"></i> Thời lượng:{' '}
                                         {Math.floor(lesson.video_duration / 60)}:
                                         {String(lesson.video_duration % 60).padStart(2, '0')}
