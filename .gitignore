@@ -48,7 +48,7 @@ static/uploads/*
 *.bak
 .gitmessage.txt
 
-# Flask legacy (có thể xóa sau)
+# Legacy files (đã xóa)
 # app.py
 # templates/
 # static/ (trừ uploads)

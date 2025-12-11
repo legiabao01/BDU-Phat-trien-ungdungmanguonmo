@@ -1,6 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+import json
+import os
 
 from .core.config import settings
 from .db.base import Base
@@ -24,7 +28,21 @@ def create_app() -> FastAPI:
     # Khởi tạo schema (tạm thời; production nên dùng alembic)
     Base.metadata.create_all(bind=engine)
 
-    app = FastAPI(title="E-Learning FastAPI")
+    # Custom JSONResponse để đảm bảo UTF-8 encoding
+    class UTF8JSONResponse(JSONResponse):
+        def render(self, content) -> bytes:
+            return json.dumps(
+                content,
+                ensure_ascii=False,
+                allow_nan=False,
+                indent=None,
+                separators=(",", ":"),
+            ).encode("utf-8")
+    
+    app = FastAPI(
+        title="E-Learning FastAPI",
+        default_response_class=UTF8JSONResponse
+    )
 
     app.add_middleware(
         CORSMiddleware,
@@ -50,6 +68,11 @@ def create_app() -> FastAPI:
     app.include_router(notifications.router, prefix="/api")
     app.include_router(code_execution.router, prefix="/api/code")
     app.include_router(payments.router, prefix="/api/payments")
+
+    # Mount static files để serve PDF, video, và các file upload
+    static_dir = "static"
+    if os.path.exists(static_dir):
+        app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
     @app.get("/health")
     def health():

@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect } from 'react'
 
-export default function VideoPlayer({ videoUrl, videoPath, onTimeUpdate }) {
+export default function VideoPlayer({ videoUrl, videoPath, onTimeUpdate, duration: initialDuration }) {
   const videoRef = useRef(null)
   const [playbackRate, setPlaybackRate] = useState(1)
   const [showControls, setShowControls] = useState(true)
   const [currentTime, setCurrentTime] = useState(0)
-  const [duration, setDuration] = useState(0)
+  const [duration, setDuration] = useState(initialDuration || 0)
   const [isPlaying, setIsPlaying] = useState(false)
   const [volume, setVolume] = useState(1)
   const [showSpeedMenu, setShowSpeedMenu] = useState(false)
@@ -19,7 +19,8 @@ export default function VideoPlayer({ videoUrl, videoPath, onTimeUpdate }) {
     const handleTimeUpdate = () => {
       setCurrentTime(video.currentTime)
       if (onTimeUpdate) {
-        onTimeUpdate(video.currentTime)
+        const videoDuration = video.duration || duration || initialDuration || 0
+        onTimeUpdate(video.currentTime, videoDuration)
       }
     }
 

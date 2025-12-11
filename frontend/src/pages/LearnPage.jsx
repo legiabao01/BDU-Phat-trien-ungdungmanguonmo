@@ -566,6 +566,8 @@ export default function LearnPage() {
   const [course, setCourse] = useState(null)
   const [lessons, setLessons] = useState([])
   const [progress, setProgress] = useState(null)
+  const [completedLessons, setCompletedLessons] = useState(new Set())
+  const [videoWatchProgress, setVideoWatchProgress] = useState({}) // {lessonId: watchedPercentage}
   const [teacher, setTeacher] = useState(null)
   const [activeSection, setActiveSection] = useState('overview')
   const [selectedLesson, setSelectedLesson] = useState(null)
@@ -643,6 +645,16 @@ export default function LearnPage() {
     try {
       const response = await axios.get(`/api/courses/${courseId}/progress`)
       setProgress(response.data)
+      
+      // Fetch tất cả progress của user để biết bài nào đã completed
+      const allProgressResponse = await axios.get('/api/users/me/progress')
+      const completedSet = new Set()
+      allProgressResponse.data.forEach(p => {
+        if (p.course_id === parseInt(courseId) && p.completed && p.lesson_id) {
+          completedSet.add(p.lesson_id)
+        }
+      })
+      setCompletedLessons(completedSet)
     } catch (error) {
       console.error('Failed to fetch progress:', error)
     }
@@ -659,15 +671,39 @@ export default function LearnPage() {
     }
   }
 
-  const markLessonComplete = async (lessonId) => {
+  const markLessonComplete = async (lessonId, completed = true) => {
     try {
       await axios.post(`/api/courses/${courseId}/progress`, {
         lesson_id: lessonId,
-        completed: true
+        completed: completed
       })
       await fetchProgress()
+      
+      // Update local state
+      const newSet = new Set(completedLessons)
+      if (completed) {
+        newSet.add(lessonId)
+      } else {
+        newSet.delete(lessonId)
+      }
+      setCompletedLessons(newSet)
     } catch (error) {
       console.error('Failed to mark lesson complete:', error)
+    }
+  }
+
+  const handleVideoTimeUpdate = (lessonId, currentTime, duration) => {
+    if (!duration || duration === 0) return
+    
+    const watchedPercentage = (currentTime / duration) * 100
+    setVideoWatchProgress(prev => ({
+      ...prev,
+      [lessonId]: watchedPercentage
+    }))
+    
+    // Tự động đánh dấu completed nếu xem >80% video
+    if (watchedPercentage >= 80 && !completedLessons.has(lessonId)) {
+      markLessonComplete(lessonId, true)
     }
   }
 
@@ -848,8 +884,13 @@ export default function LearnPage() {
                       <span>
                         <i className="bi bi-play-circle me-2"></i>
                         Bài {lesson.thu_tu}: {lesson.tieu_de_muc}
+                        {completedLessons.has(lesson.id) && (
+                          <i className="bi bi-check-circle-fill text-success ms-2" title="Đã hoàn thành"></i>
+                        )}
                       </span>
-                      {!lesson.is_unlocked && <i className="bi bi-lock"></i>}
+                      <div>
+                        {!lesson.is_unlocked && <i className="bi bi-lock"></i>}
+                      </div>
                     </div>
                   </button>
                 ))}
@@ -1013,17 +1054,42 @@ export default function LearnPage() {
                                     <VideoPlayer 
                                       videoUrl={videoUrl}
                                       videoPath={lesson.video_path}
-                                      onTimeUpdate={(time) => {
-                                        // Có thể lưu tiến độ xem video ở đây
+                                      duration={lesson.video_duration}
+                                      onTimeUpdate={(time, duration) => {
+                                        handleVideoTimeUpdate(lesson.id, time, duration)
                                       }}
                                     />
-                                    {lesson.video_duration && (
-                                      <small className="text-muted mt-2 d-block">
-                                        <i className="bi bi-clock"></i> Thời lượng:{' '}
-                                        {Math.floor(lesson.video_duration / 60)}:
-                                        {String(lesson.video_duration % 60).padStart(2, '0')}
-                                      </small>
-                                    )}
+                                    <div className="mt-3 d-flex justify-content-between align-items-center">
+                                      <div>
+                                        {lesson.video_duration && (
+                                          <small className="text-muted d-block">
+                                            <i className="bi bi-clock"></i> Thời lượng:{' '}
+                                            {Math.floor(lesson.video_duration / 60)}:
+                                            {String(lesson.video_duration % 60).padStart(2, '0')}
+                                          </small>
+                                        )}
+                                        {videoWatchProgress[lesson.id] && (
+                                          <small className="text-info d-block mt-1">
+                                            <i className="bi bi-eye"></i> Đã xem: {Math.round(videoWatchProgress[lesson.id])}%
+                                          </small>
+                                        )}
+                                      </div>
+                                      <div className="form-check">
+                                        <input
+                                          className="form-check-input"
+                                          type="checkbox"
+                                          id={`completed-${lesson.id}`}
+                                          checked={completedLessons.has(lesson.id)}
+                                          onChange={(e) => {
+                                            markLessonComplete(lesson.id, e.target.checked)
+                                          }}
+                                        />
+                                        <label className="form-check-label" htmlFor={`completed-${lesson.id}`}>
+                                          <i className="bi bi-check-circle me-1"></i>
+                                          Đã hoàn thành bài học
+                                        </label>
+                                      </div>
+                                    </div>
                                   </div>
                                 )}
 
@@ -1038,7 +1104,7 @@ export default function LearnPage() {
                                     {lesson.tai_lieu_pdf ? (
                                       <div className="mb-3">
                                         <a 
-                                          href={lesson.tai_lieu_pdf} 
+                                          href={lesson.tai_lieu_pdf.startsWith('http') ? lesson.tai_lieu_pdf : `http://localhost:8001${lesson.tai_lieu_pdf}`}
                                           target="_blank" 
                                           rel="noopener noreferrer"
                                           className="btn btn-outline-primary btn-sm"
@@ -1061,7 +1127,7 @@ export default function LearnPage() {
                                                 rel="noopener noreferrer"
                                                 className="text-decoration-none"
                                               >
-                                                <i className="bi bi-link-45deg"></i> {link.title || link.url}
+                                                <i className="bi bi-link-45deg"></i> {String(link.title || link.url)}
                                               </a>
                                             </li>
                                           ))}
@@ -1089,9 +1155,13 @@ export default function LearnPage() {
                                                       <i className="bi bi-code-square text-success fs-5 me-2"></i>
                                                     )}
                                                     <div className="flex-grow-1">
-                                                      <h6 className="mb-1 small">{resource.title || 'Tài nguyên'}</h6>
+                                                      <h6 className="mb-1 small">
+                                                        {String(resource.title || 'Tài nguyên')}
+                                                      </h6>
                                                       {resource.description && (
-                                                        <p className="mb-1 small text-muted">{resource.description}</p>
+                                                        <p className="mb-1 small text-muted">
+                                                          {String(resource.description)}
+                                                        </p>
                                                       )}
                                                       {resource.url && (
                                                         <a 
