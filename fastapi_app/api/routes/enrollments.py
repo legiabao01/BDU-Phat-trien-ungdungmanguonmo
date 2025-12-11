@@ -17,16 +17,37 @@ def enroll_course(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    """Đăng ký khóa học - logic hợp lý và đầy đủ"""
     # Kiểm tra khóa học tồn tại
     course = db.query(Course).filter(Course.id == course_id).first()
     if not course:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Khóa học không tồn tại")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Khóa học không tồn tại"
+        )
+    
+    # Kiểm tra khóa học có đang active không
+    if course.trang_thai != "active":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Khóa học này hiện không khả dụng"
+        )
     
     # Kiểm tra đã đăng ký chưa
-    existing = db.query(Enrollment).filter(
-        Enrollment.user_id == current_user.id,
-        Enrollment.khoa_hoc_id == course_id
-    ).first()
+    try:
+        existing = db.query(Enrollment).filter(
+            Enrollment.user_id == current_user.id,
+            Enrollment.khoa_hoc_id == course_id
+        ).first()
+    except Exception as e:
+        # Nếu bảng chưa tồn tại, tạo bảng và thử lại
+        from ...db.base import Base
+        from ...db.session import engine
+        Base.metadata.create_all(bind=engine, tables=[Enrollment.__table__])
+        existing = db.query(Enrollment).filter(
+            Enrollment.user_id == current_user.id,
+            Enrollment.khoa_hoc_id == course_id
+        ).first()
     
     if existing:
         if existing.trang_thai == "cancelled":
@@ -35,10 +56,19 @@ def enroll_course(
             db.commit()
             db.refresh(existing)
             return existing
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Bạn đã đăng ký khóa học này rồi"
-        )
+        elif existing.trang_thai == "active":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Bạn đã đăng ký khóa học này rồi"
+            )
+        elif existing.trang_thai == "completed":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Bạn đã hoàn thành khóa học này rồi"
+            )
+    
+    # Kiểm tra giá khóa học (nếu có giá > 0 thì cần thanh toán, nhưng MVP có thể bỏ qua)
+    # Trong MVP, cho phép đăng ký miễn phí hoặc có giá
     
     # Tạo enrollment mới
     enrollment = Enrollment(

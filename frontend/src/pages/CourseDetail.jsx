@@ -11,6 +11,8 @@ export default function CourseDetail() {
   const [selectedLesson, setSelectedLesson] = useState(null)
   const [loading, setLoading] = useState(true)
   const [isEnrolled, setIsEnrolled] = useState(false)
+  const [enrolling, setEnrolling] = useState(false)
+  const [enrollError, setEnrollError] = useState('')
 
   useEffect(() => {
     fetchCourse()
@@ -55,17 +57,27 @@ export default function CourseDetail() {
 
   const handleEnroll = async () => {
     if (!user) {
-      alert('Vui lòng đăng nhập để đăng ký khóa học')
+      setEnrollError('Vui lòng đăng nhập để đăng ký khóa học')
+      setTimeout(() => setEnrollError(''), 3000)
       return
     }
+
+    setEnrolling(true)
+    setEnrollError('')
+    
     try {
       await axios.post(`/api/courses/${id}/enroll`)
       setIsEnrolled(true)
-      alert('Đăng ký khóa học thành công!')
+      // Hiển thị thông báo thành công và redirect
+      alert('Đăng ký khóa học thành công! Đang chuyển đến trang học...')
+      window.location.href = `/learn/${id}`
     } catch (error) {
-      const message = error.response?.data?.detail || 'Đăng ký thất bại'
-      alert(message)
+      const message = error.response?.data?.detail || 'Đăng ký thất bại. Vui lòng thử lại.'
+      setEnrollError(message)
+      setTimeout(() => setEnrollError(''), 5000)
       console.error('Failed to enroll:', error)
+    } finally {
+      setEnrolling(false)
     }
   }
 
@@ -120,7 +132,17 @@ export default function CourseDetail() {
                 <i className="bi bi-calendar-check"></i> {course.so_buoi || 0} buổi học
               </span>
             </div>
-            <div className="d-flex gap-2">
+            <div className="d-flex gap-2 flex-column">
+              {enrollError && (
+                <div className="alert alert-danger alert-dismissible fade show" role="alert">
+                  <i className="bi bi-exclamation-circle"></i> {enrollError}
+                  <button
+                    type="button"
+                    className="btn-close"
+                    onClick={() => setEnrollError('')}
+                  ></button>
+                </div>
+              )}
               {isEnrolled ? (
                 <Link
                   to={`/learn/${id}`}
@@ -132,10 +154,24 @@ export default function CourseDetail() {
                 <button
                   onClick={handleEnroll}
                   className="btn btn-primary-custom"
-                  disabled={!user}
+                  disabled={!user || enrolling}
                 >
-                  <i className="bi bi-cart-plus"></i> Đăng ký khóa học
+                  {enrolling ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2"></span>
+                      Đang đăng ký...
+                    </>
+                  ) : (
+                    <>
+                      <i className="bi bi-cart-plus"></i> Đăng ký khóa học
+                    </>
+                  )}
                 </button>
+              )}
+              {!user && (
+                <Link to="/login" className="btn btn-outline-custom">
+                  <i className="bi bi-box-arrow-in-right"></i> Đăng nhập để đăng ký
+                </Link>
               )}
               <Link to="/courses" className="btn btn-outline-custom">
                 <i className="bi bi-arrow-left"></i> Quay lại

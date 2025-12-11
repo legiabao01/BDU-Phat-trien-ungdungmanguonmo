@@ -21,27 +21,39 @@ export default function AdminDashboard() {
 
   const fetchData = async () => {
     try {
-      const [coursesRes, usersRes] = await Promise.all([
+      const [statsRes, coursesRes, usersRes] = await Promise.all([
+        axios.get('/api/admin/stats'),
         axios.get('/api/courses'),
-        axios.get('/api/users') // TODO: Implement admin endpoint
+        axios.get('/api/users')
       ])
       
+      setStats(statsRes.data)
       setCourses(coursesRes.data)
-      
-      // Calculate stats
-      const teachers = usersRes.data?.filter(u => u.vai_tro === 'teacher') || []
-      const students = usersRes.data?.filter(u => u.vai_tro === 'student') || []
-      
-      setStats({
-        totalCourses: coursesRes.data.length,
-        totalUsers: usersRes.data?.length || 0,
-        totalTeachers: teachers.length,
-        totalStudents: students.length
-      })
-      
       setUsers(usersRes.data || [])
     } catch (error) {
       console.error('Failed to fetch data:', error)
+      // Fallback: tính toán từ courses và users
+      try {
+        const [coursesRes, usersRes] = await Promise.all([
+          axios.get('/api/courses'),
+          axios.get('/api/users')
+        ])
+        
+        const teachers = usersRes.data?.filter(u => u.role === 'teacher' || u.vai_tro === 'teacher') || []
+        const students = usersRes.data?.filter(u => u.role === 'student' || u.vai_tro === 'student') || []
+        
+        setStats({
+          totalCourses: coursesRes.data.length,
+          totalUsers: usersRes.data?.length || 0,
+          totalTeachers: teachers.length,
+          totalStudents: students.length
+        })
+        
+        setCourses(coursesRes.data)
+        setUsers(usersRes.data || [])
+      } catch (err) {
+        console.error('Failed to fetch fallback data:', err)
+      }
     } finally {
       setLoading(false)
     }
@@ -170,4 +182,6 @@ export default function AdminDashboard() {
     </div>
   )
 }
+
+
 

@@ -28,7 +28,8 @@ def list_users(
     current_user: User = Depends(deps.get_current_active_user)
 ):
     """List all users - chỉ admin mới có quyền"""
-    if current_user.vai_tro != 'admin':
+    from ...models.user import UserRole
+    if current_user.role != UserRole.admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Chỉ admin mới có quyền")
     
     users = db.query(User).all()

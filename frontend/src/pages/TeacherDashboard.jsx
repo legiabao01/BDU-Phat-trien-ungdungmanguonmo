@@ -6,20 +6,37 @@ import { useAuth } from '../context/AuthContext'
 export default function TeacherDashboard() {
   const { user } = useAuth()
   const [courses, setCourses] = useState([])
+  const [stats, setStats] = useState({
+    totalCourses: 0,
+    totalStudents: 0,
+    pendingSubmissions: 0
+  })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetchMyCourses()
+    fetchData()
   }, [])
 
-  const fetchMyCourses = async () => {
+  const fetchData = async () => {
     try {
-      // Lấy tất cả courses và filter theo teacher_id
-      const response = await axios.get('/api/courses')
-      const myCourses = response.data.filter(course => course.teacher_id === user?.id)
-      setCourses(myCourses)
+      // Lấy stats và courses cùng lúc
+      const [statsRes, coursesRes] = await Promise.all([
+        axios.get('/api/teachers/me/stats'),
+        axios.get('/api/teachers/me/courses/with-stats')
+      ])
+      
+      setStats(statsRes.data)
+      setCourses(coursesRes.data)
     } catch (error) {
-      console.error('Failed to fetch courses:', error)
+      console.error('Failed to fetch data:', error)
+      // Fallback: lấy courses như cũ
+      try {
+        const response = await axios.get('/api/courses')
+        const myCourses = response.data.filter(course => course.teacher_id === user?.id)
+        setCourses(myCourses)
+      } catch (err) {
+        console.error('Failed to fetch courses:', err)
+      }
     } finally {
       setLoading(false)
     }
@@ -49,19 +66,19 @@ export default function TeacherDashboard() {
       <div className="row mb-4">
         <div className="col-md-4">
           <div className="card-soft text-center">
-            <h3 className="text-brand-sky">{courses.length}</h3>
+            <h3 className="text-brand-sky">{stats.totalCourses}</h3>
             <p className="text-muted mb-0">Khóa học của tôi</p>
           </div>
         </div>
         <div className="col-md-4">
           <div className="card-soft text-center">
-            <h3 className="text-brand-green">0</h3>
+            <h3 className="text-brand-green">{stats.totalStudents}</h3>
             <p className="text-muted mb-0">Học viên</p>
           </div>
         </div>
         <div className="col-md-4">
           <div className="card-soft text-center">
-            <h3 className="text-warning">0</h3>
+            <h3 className="text-warning">{stats.pendingSubmissions}</h3>
             <p className="text-muted mb-0">Bài tập cần chấm</p>
           </div>
         </div>
@@ -87,6 +104,7 @@ export default function TeacherDashboard() {
                   <th>Tên khóa học</th>
                   <th>Cấp độ</th>
                   <th>Hình thức</th>
+                  <th>Học viên</th>
                   <th>Giá</th>
                   <th>Thao tác</th>
                 </tr>
@@ -100,6 +118,11 @@ export default function TeacherDashboard() {
                     </td>
                     <td>
                       <span className="badge-custom badge-success">{course.hinh_thuc || 'online'}</span>
+                    </td>
+                    <td>
+                      <span className="badge-custom badge-info">
+                        <i className="bi bi-people"></i> {course.student_count || 0}
+                      </span>
                     </td>
                     <td>{new Intl.NumberFormat('vi-VN').format(course.gia)} VNĐ</td>
                     <td>
@@ -126,4 +149,6 @@ export default function TeacherDashboard() {
     </div>
   )
 }
+
+
 
