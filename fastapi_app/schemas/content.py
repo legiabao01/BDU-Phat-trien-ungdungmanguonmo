@@ -12,6 +12,7 @@ class ContentBase(BaseModel):
     thu_tu: Optional[int] = 0
     is_unlocked: Optional[bool] = True
     unlock_date: Optional[datetime] = None
+    # Tài liệu và resources
     tai_lieu_pdf: Optional[str] = None
     tai_lieu_links: Optional[List[Dict[str, str]]] = None
     resources: Optional[List[Dict[str, Any]]] = None

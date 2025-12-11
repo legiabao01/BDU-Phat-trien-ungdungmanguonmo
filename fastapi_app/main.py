@@ -5,7 +5,7 @@ from fastapi.openapi.utils import get_openapi
 from .core.config import settings
 from .db.base import Base
 from .db.session import engine
-from .api.routes import auth, users, courses, content, progress, discussions, certificates, enrollments, assignments, quiz, stats
+from .api.routes import auth, users, courses, content, progress, discussions, certificates, enrollments, assignments, quiz, stats, reviews
 
 # Import models to register metadata with Base
 from .models import user, course, course_content  # noqa: F401
@@ -15,7 +15,7 @@ from .models import certificate  # noqa: F401
 from .models import enrollment  # noqa: F401
 from .models import assignment  # noqa: F401
 from .models import quiz as quiz_model  # noqa: F401
-from .models import enrollment  # noqa: F401
+from .models import review  # noqa: F401
 
 
 def create_app() -> FastAPI:
@@ -44,6 +44,7 @@ def create_app() -> FastAPI:
     app.include_router(assignments.router, prefix="/api")
     app.include_router(quiz.router, prefix="/api")
     app.include_router(stats.router, prefix="/api")
+    app.include_router(reviews.router, prefix="/api")
 
     @app.get("/health")
     def health():

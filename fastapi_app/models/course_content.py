@@ -1,5 +1,6 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, ForeignKey, JSON
+from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, ForeignKey
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
 from ..db.base import Base
@@ -19,9 +20,9 @@ class CourseContent(Base):
     is_unlocked = Column(Boolean, default=True)
     unlock_date = Column(DateTime(timezone=True))
     # Tài liệu và resources
-    tai_lieu_pdf = Column(String(500))  # Đường dẫn file PDF
-    tai_lieu_links = Column(JSON)  # Danh sách links: [{"title": "...", "url": "..."}, ...]
-    resources = Column(JSON)  # Tài nguyên khác: [{"type": "pdf|link|code", "title": "...", "url": "...", "description": "..."}, ...]
+    tai_lieu_pdf = Column(String(500), nullable=True)  # Đường dẫn file PDF
+    tai_lieu_links = Column(JSONB, nullable=True)  # Danh sách links: [{"title": "...", "url": "..."}, ...]
+    resources = Column(JSONB, nullable=True)  # Tài nguyên khác: [{"type": "pdf|link|code", "title": "...", "url": "...", "description": "..."}, ...]
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
 
     course = relationship("Course", back_populates="contents")

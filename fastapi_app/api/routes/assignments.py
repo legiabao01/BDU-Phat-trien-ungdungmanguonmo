@@ -121,7 +121,7 @@ def submit_assignment(
     return submission
 
 
-@router.get("/assignments/{assignment_id}/submissions", response_model=list[SubmissionOut])
+@router.get("/assignments/{assignment_id}/submissions")
 def list_submissions(
     assignment_id: int,
     db: Session = Depends(get_db),
@@ -131,15 +131,33 @@ def list_submissions(
     if not assignment:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bài tập không tồn tại")
     
+    from ...models.user import User as UserModel
+    
     # Chỉ giáo viên hoặc admin mới xem được tất cả submissions
     if current_user.vai_tro in ['teacher', 'admin']:
-        return db.query(Submission).filter(Submission.bai_tap_id == assignment_id).all()
+        submissions = db.query(Submission).filter(Submission.bai_tap_id == assignment_id).all()
     else:
         # Học viên chỉ xem được submission của mình
-        return db.query(Submission).filter(
+        submissions = db.query(Submission).filter(
             Submission.bai_tap_id == assignment_id,
             Submission.user_id == current_user.id
         ).all()
+    
+    # Thêm thông tin user vào mỗi submission
+    result = []
+    for sub in submissions:
+        user = db.query(UserModel).filter(UserModel.id == sub.user_id).first()
+        sub_dict = {
+            **sub.__dict__,
+            "user": {
+                "id": user.id if user else None,
+                "ho_ten": user.ho_ten if user else None,
+                "email": user.email if user else None
+            } if user else None
+        }
+        result.append(sub_dict)
+    
+    return result
 
 
 @router.post("/submissions/{submission_id}/grade", response_model=SubmissionOut)

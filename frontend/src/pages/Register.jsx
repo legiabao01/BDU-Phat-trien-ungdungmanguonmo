@@ -47,7 +47,7 @@ export default function Register() {
         <nav className="navbar navbar-expand-lg navbar-light bg-white">
           <div className="container">
             <Link className="navbar-brand fw-bold" to="/courses">
-              <span className="gradient-text">Học Trực Tuyến</span>
+              <span className="gradient-text">Code Dạo</span>
             </Link>
             <div className="navbar-nav ms-auto">
               <Link className="nav-link text-brand-sky" to="/courses">

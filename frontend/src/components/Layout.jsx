@@ -17,7 +17,7 @@ export default function Layout() {
         <nav className="navbar navbar-expand-lg navbar-light bg-white">
           <div className="container">
             <Link className="navbar-brand fw-bold" to="/courses">
-              <span className="gradient-text">Học Trực Tuyến</span>
+              <span className="gradient-text">Code Dạo</span>
             </Link>
             <button 
               className="navbar-toggler" 
@@ -28,7 +28,7 @@ export default function Layout() {
               <span className="navbar-toggler-icon"></span>
             </button>
             <div className="collapse navbar-collapse" id="navbarNav">
-              <ul className="navbar-nav me-auto d-flex flex-row gap-3">
+              <ul className="navbar-nav mx-auto d-flex flex-row gap-3">
                 <li className="nav-item">
                   <Link className="nav-link" to="/courses">Trang chủ</Link>
                 </li>
@@ -70,7 +70,7 @@ export default function Layout() {
                           className="nav-link px-3 py-1 rounded border border-gray-200 text-sm text-gray-600" 
                           to="/dashboard"
                         >
-                          Admin
+                          Quản trị viên
                         </Link>
                       </li>
                     )}
@@ -80,7 +80,7 @@ export default function Layout() {
                           className="nav-link px-3 py-1 rounded border border-gray-200 text-sm text-gray-600" 
                           to="/dashboard"
                         >
-                          Teacher
+                          Giáo viên
                         </Link>
                       </li>
                     )}

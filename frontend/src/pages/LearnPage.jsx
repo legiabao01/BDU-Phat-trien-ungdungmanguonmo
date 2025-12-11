@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import axios from 'axios'
 import { useAuth } from '../context/AuthContext'
 import QuizSection from '../components/QuizSection'
 import QuizCreator from '../components/QuizCreator'
+import LessonResourcesEditor from '../components/LessonResourcesEditor'
 
 // Discussion Section Component
 function DiscussionSection({ courseId, teacher }) {
@@ -230,6 +231,18 @@ function AssignmentsSection({ courseId }) {
                 </small>
               </div>
 
+              {/* Teacher actions */}
+              {(user?.role === 'teacher' || user?.vai_tro === 'teacher') && (
+                <div className="mb-3">
+                  <Link
+                    to={`/grade/${courseId}/${assignment.id}`}
+                    className="btn btn-success"
+                  >
+                    <i className="bi bi-file-check"></i> Chấm bài ({submission ? 'Đã có bài nộp' : 'Chưa có bài nộp'})
+                  </Link>
+                </div>
+              )}
+
               {isSubmitted ? (
                 <div className="alert alert-success">
                   <h6>Đã nộp bài</h6>
@@ -256,7 +269,7 @@ function AssignmentsSection({ courseId }) {
                       <i className="bi bi-exclamation-triangle"></i> Đã quá hạn nộp bài
                     </div>
                   )}
-                  {user && user.role === 'student' && (
+                  {user && (user.role === 'student' || user.vai_tro === 'student') && (
                     <button
                       className="btn btn-primary-custom"
                       onClick={() => setSelectedAssignment(assignment)}
@@ -383,6 +396,27 @@ export default function LearnPage() {
       setLoading(false)
     }
   }
+
+  const refreshLesson = async (lessonId) => {
+    try {
+      const response = await axios.get(`/api/lessons/${lessonId}`)
+      setLessons(lessons.map(l => l.id === lessonId ? response.data : l))
+      if (selectedLesson?.id === lessonId) {
+        setSelectedLesson(response.data)
+      }
+    } catch (error) {
+      console.error('Failed to refresh lesson:', error)
+    }
+  }
+
+  // Tính toán isTeacher sau khi course và user đã được load
+  const isTeacher = useMemo(() => {
+    if (!user || !course) return false
+    const userRole = user.role || user.vai_tro
+    const isTeacherRole = userRole === 'teacher'
+    const isCourseOwner = course.teacher_id === user.id
+    return isTeacherRole && isCourseOwner
+  }, [user, course])
 
   const fetchCourse = async () => {
     const response = await axios.get(`/api/courses/${courseId}`)
@@ -582,9 +616,16 @@ export default function LearnPage() {
                     className={`list-group-item list-group-item-action ${
                       selectedLesson?.id === lesson.id ? 'active' : ''
                     } ${!lesson.is_unlocked ? 'opacity-50' : ''}`}
-                    onClick={() => {
+                    onClick={async () => {
                       if (lesson.is_unlocked) {
-                        setSelectedLesson(lesson)
+                        // Fetch lại dữ liệu bài học để đảm bảo có tài liệu mới nhất
+                        try {
+                          const response = await axios.get(`/api/lessons/${lesson.id}`)
+                          setSelectedLesson(response.data)
+                        } catch (error) {
+                          console.error('Failed to fetch lesson:', error)
+                          setSelectedLesson(lesson)
+                        }
                         setActiveSection('curriculum')
                       }
                     }}
@@ -788,15 +829,15 @@ export default function LearnPage() {
                                   </div>
                                 )}
 
-                                {/* Tài liệu và Resources */}
-                                {isSelected && (lesson.tai_lieu_pdf || (lesson.tai_lieu_links && lesson.tai_lieu_links.length > 0) || (lesson.resources && lesson.resources.length > 0)) && (
+                                {/* Tài liệu và Resources - Luôn hiển thị khi bài học được chọn */}
+                                {isSelected && (
                                   <div className="mt-4 p-3 bg-light rounded">
                                     <h5 className="mb-3">
                                       <i className="bi bi-file-earmark-text"></i> Tài liệu học tập
                                     </h5>
                                     
                                     {/* PDF */}
-                                    {lesson.tai_lieu_pdf && (
+                                    {lesson.tai_lieu_pdf ? (
                                       <div className="mb-3">
                                         <a 
                                           href={lesson.tai_lieu_pdf} 
@@ -807,10 +848,10 @@ export default function LearnPage() {
                                           <i className="bi bi-file-pdf"></i> Tải tài liệu PDF
                                         </a>
                                       </div>
-                                    )}
+                                    ) : null}
 
                                     {/* Links */}
-                                    {lesson.tai_lieu_links && lesson.tai_lieu_links.length > 0 && (
+                                    {lesson.tai_lieu_links && lesson.tai_lieu_links.length > 0 ? (
                                       <div className="mb-3">
                                         <h6 className="text-muted mb-2">Liên kết hữu ích:</h6>
                                         <ul className="list-unstyled">
@@ -828,10 +869,10 @@ export default function LearnPage() {
                                           ))}
                                         </ul>
                                       </div>
-                                    )}
+                                    ) : null}
 
                                     {/* Resources */}
-                                    {lesson.resources && lesson.resources.length > 0 && (
+                                    {lesson.resources && lesson.resources.length > 0 ? (
                                       <div>
                                         <h6 className="text-muted mb-2">Tài nguyên khác:</h6>
                                         <div className="row">
@@ -872,15 +913,36 @@ export default function LearnPage() {
                                           ))}
                                         </div>
                                       </div>
+                                    ) : null}
+
+                                    {/* Thông báo nếu chưa có tài liệu */}
+                                    {!lesson.tai_lieu_pdf && (!lesson.tai_lieu_links || lesson.tai_lieu_links.length === 0) && (!lesson.resources || lesson.resources.length === 0) && (
+                                      <div className="alert alert-info mb-0">
+                                        <i className="bi bi-info-circle"></i> Chưa có tài liệu cho bài học này.
+                                      </div>
                                     )}
                                   </div>
+                                )}
+
+                                {/* Editor tài liệu cho giáo viên */}
+                                {isSelected && isTeacher && (
+                                  <LessonResourcesEditor
+                                    lesson={lesson}
+                                    onUpdate={() => refreshLesson(lesson.id)}
+                                  />
                                 )}
 
                                 <div className="d-flex gap-2">
                                   <button
                                     className="btn btn-sm btn-outline-primary"
-                                    onClick={() => {
-                                      setSelectedLesson(lesson)
+                                    onClick={async () => {
+                                      // Refresh lesson data để đảm bảo có tài liệu mới nhất
+                                      try {
+                                        const response = await axios.get(`/api/lessons/${lesson.id}`)
+                                        setSelectedLesson(response.data)
+                                      } catch (error) {
+                                        console.error('Failed to refresh lesson:', error)
+                                      }
                                       markLessonComplete(lesson.id)
                                     }}
                                   >
@@ -888,8 +950,14 @@ export default function LearnPage() {
                                   </button>
                                   <button
                                     className="btn btn-sm btn-outline-info"
-                                    onClick={() => {
-                                      setSelectedLesson(lesson)
+                                    onClick={async () => {
+                                      // Refresh lesson data để đảm bảo có tài liệu mới nhất
+                                      try {
+                                        const response = await axios.get(`/api/lessons/${lesson.id}`)
+                                        setSelectedLesson(response.data)
+                                      } catch (error) {
+                                        console.error('Failed to refresh lesson:', error)
+                                      }
                                       setActiveSection('discussion')
                                     }}
                                   >

@@ -38,3 +38,4 @@ class Course(Base):
 
     teacher = relationship("User", backref="courses")
     contents = relationship("CourseContent", back_populates="course", cascade="all, delete-orphan")
+    # reviews = relationship("Review", back_populates="course", cascade="all, delete-orphan")  # TODO: Uncomment khi Review model được import

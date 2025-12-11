@@ -93,6 +93,7 @@ def update_lesson(
     tieu_de_muc: Optional[str] = Form(None),
     noi_dung: Optional[str] = Form(None),
     video_path: Optional[str] = Form(None),
+    video_file: Optional[UploadFile] = File(None),
     tai_lieu_pdf_file: Optional[UploadFile] = File(None),
     tai_lieu_links: Optional[str] = Form(None),  # JSON string
     resources: Optional[str] = Form(None),  # JSON string
@@ -105,15 +106,34 @@ def update_lesson(
     
     # Kiểm tra quyền: chỉ teacher của khóa học hoặc admin
     course = db.query(Course).filter(Course.id == lesson.khoa_hoc_id).first()
-    if course and course.giao_vien_id != current_user.id and current_user.role != "admin":
+    if course and course.teacher_id != current_user.id and current_user.role != "admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Không có quyền chỉnh sửa bài học này")
     
     if tieu_de_muc:
         lesson.tieu_de_muc = tieu_de_muc
     if noi_dung is not None:
         lesson.noi_dung = noi_dung
-    if video_path is not None:
-        lesson.video_path = video_path
+    
+    # Xử lý upload video
+    final_video_path = video_path
+    if video_file:
+        # Lưu file video
+        file_ext = os.path.splitext(video_file.filename)[1]
+        allowed_extensions = ['.mp4', '.webm', '.ogg', '.mov', '.avi']
+        if file_ext.lower() not in allowed_extensions:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Chỉ chấp nhận file video: {', '.join(allowed_extensions)}")
+        
+        filename = f"lesson_{lesson_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}{file_ext}"
+        file_path = os.path.join(UPLOAD_DIR, filename)
+        
+        with open(file_path, "wb") as buffer:
+            content = video_file.file.read()
+            buffer.write(content)
+        
+        final_video_path = f"/static/uploads/videos/{filename}"
+    
+    if final_video_path is not None:
+        lesson.video_path = final_video_path
     
     # Xử lý upload PDF
     if tai_lieu_pdf_file:

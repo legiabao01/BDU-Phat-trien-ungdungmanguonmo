@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import axios from 'axios'
 import { useAuth } from '../context/AuthContext'
+import ReviewSection from '../components/ReviewSection'
 
 export default function CourseDetail() {
   const { id } = useParams()
@@ -299,6 +300,11 @@ export default function CourseDetail() {
                 <p className="text-muted mt-3">Chọn bài học để xem</p>
               </div>
             )}
+          </div>
+
+          {/* Reviews Section */}
+          <div className="card-soft mt-4">
+            <ReviewSection courseId={id} />
           </div>
         </div>
       </div>

@@ -1,10 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Body
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 
 from ...db.session import get_db
 from ...models.course import Course, CourseStatus, CourseMode
 from ...schemas.course import CourseCreate, CourseOut
+from ...api.deps import get_current_active_user
+from ...models.user import User
 
 router = APIRouter()
 
@@ -55,7 +57,22 @@ def get_course(course_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/courses", response_model=CourseOut, status_code=status.HTTP_201_CREATED)
-def create_course(payload: CourseCreate, db: Session = Depends(get_db)):
+def create_course(
+    payload: CourseCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Tạo khóa học - giáo viên hoặc admin"""
+    from ...models.user import UserRole
+    
+    # Giáo viên chỉ tạo được khóa học cho chính mình
+    teacher_id = payload.teacher_id
+    if current_user.role == UserRole.teacher:
+        teacher_id = current_user.id
+    elif current_user.role != UserRole.admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Chỉ giáo viên hoặc admin mới có quyền")
+    
+    # Khóa học mới tạo sẽ ở trạng thái draft
     course = Course(
         tieu_de=payload.tieu_de,
         mo_ta=payload.mo_ta,
@@ -66,10 +83,71 @@ def create_course(payload: CourseCreate, db: Session = Depends(get_db)):
         so_buoi=payload.so_buoi,
         thoi_luong=payload.thoi_luong,
         hinh_thuc=payload.hinh_thuc,
-        teacher_id=payload.teacher_id,
+        teacher_id=teacher_id,
+        trang_thai=CourseStatus.draft  # Mặc định là draft, cần admin duyệt
     )
     db.add(course)
     db.commit()
     db.refresh(course)
     return course
+
+
+@router.put("/admin/courses/{course_id}/approve", response_model=CourseOut)
+def approve_course(
+    course_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Duyệt khóa học - chỉ admin"""
+    from ...models.user import UserRole
+    
+    if current_user.role != UserRole.admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Chỉ admin mới có quyền")
+    
+    course = db.query(Course).filter(Course.id == course_id).first()
+    if not course:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Khóa học không tồn tại")
+    
+    course.trang_thai = CourseStatus.active
+    db.commit()
+    db.refresh(course)
+    return course
+
+
+@router.put("/admin/courses/{course_id}/status", response_model=CourseOut)
+def update_course_status(
+    course_id: int,
+    status: CourseStatus = Body(..., embed=True),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Cập nhật trạng thái khóa học (active/inactive/draft) - chỉ admin"""
+    from ...models.user import UserRole
+    
+    if current_user.role != UserRole.admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Chỉ admin mới có quyền")
+    
+    course = db.query(Course).filter(Course.id == course_id).first()
+    if not course:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Khóa học không tồn tại")
+    
+    course.trang_thai = status
+    db.commit()
+    db.refresh(course)
+    return course
+
+
+@router.get("/admin/courses/pending", response_model=list[CourseOut])
+def list_pending_courses(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Danh sách khóa học chờ duyệt - chỉ admin"""
+    from ...models.user import UserRole
+    
+    if current_user.role != UserRole.admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Chỉ admin mới có quyền")
+    
+    courses = db.query(Course).filter(Course.trang_thai == CourseStatus.draft).order_by(Course.created_at.desc()).all()
+    return courses
 
