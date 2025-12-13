@@ -90,10 +90,11 @@ export default function Layout() {
                     </li>
                     <li className="nav-item">
                       <Link 
-                        className="nav-link text-white px-3 py-2 rounded" 
+                        className="nav-link px-3 py-2 rounded" 
                         to="/addfunds"
                         style={{ 
                           backgroundColor: '#2563eb',
+                          color: '#000000',
                           fontWeight: 'bold'
                         }}
                       >
