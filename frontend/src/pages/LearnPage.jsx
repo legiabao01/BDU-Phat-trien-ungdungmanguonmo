@@ -1380,6 +1380,7 @@ export default function LearnPage() {
                                       videoUrl={videoUrl}
                                       videoPath={lesson.video_path}
                                       duration={lesson.video_duration}
+                                      lazy={true}  // Lazy load video để tối ưu performance
                                       onTimeUpdate={(time, duration) => {
                                         handleVideoTimeUpdate(lesson.id, time, duration)
                                       }}

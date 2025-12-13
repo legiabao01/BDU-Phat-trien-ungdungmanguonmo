@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 
-export default function VideoPlayer({ videoUrl, videoPath, onTimeUpdate, duration: initialDuration }) {
+export default function VideoPlayer({ videoUrl, videoPath, onTimeUpdate, duration: initialDuration, lazy = false }) {
   const videoRef = useRef(null)
+  const containerRef = useRef(null)
   const [playbackRate, setPlaybackRate] = useState(1)
   const [showControls, setShowControls] = useState(true)
   const [currentTime, setCurrentTime] = useState(0)
@@ -11,10 +12,39 @@ export default function VideoPlayer({ videoUrl, videoPath, onTimeUpdate, duratio
   const [showSpeedMenu, setShowSpeedMenu] = useState(false)
   const [showSubtitleMenu, setShowSubtitleMenu] = useState(false)
   const [subtitleTrack, setSubtitleTrack] = useState(null)
+  const [isLoaded, setIsLoaded] = useState(!lazy)  // Nếu lazy, chưa load
+  const [isBuffering, setIsBuffering] = useState(false)
+  const [error, setError] = useState(null)
+
+  // Lazy loading với Intersection Observer
+  useEffect(() => {
+    if (!lazy || isLoaded) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setIsLoaded(true)
+            observer.disconnect()
+          }
+        })
+      },
+      {
+        rootMargin: '100px', // Load khi còn cách 100px
+        threshold: 0.1
+      }
+    )
+
+    if (containerRef.current) {
+      observer.observe(containerRef.current)
+    }
+
+    return () => observer.disconnect()
+  }, [lazy, isLoaded])
 
   useEffect(() => {
     const video = videoRef.current
-    if (!video) return
+    if (!video || !isLoaded) return
 
     const handleTimeUpdate = () => {
       setCurrentTime(video.currentTime)
@@ -26,23 +56,38 @@ export default function VideoPlayer({ videoUrl, videoPath, onTimeUpdate, duratio
 
     const handleLoadedMetadata = () => {
       setDuration(video.duration)
+      setIsBuffering(false)
     }
 
     const handlePlay = () => setIsPlaying(true)
     const handlePause = () => setIsPlaying(false)
+    
+    const handleWaiting = () => setIsBuffering(true)
+    const handleCanPlay = () => setIsBuffering(false)
+    const handleError = (e) => {
+      setError('Không thể tải video. Vui lòng thử lại sau.')
+      setIsBuffering(false)
+      console.error('Video error:', e)
+    }
 
     video.addEventListener('timeupdate', handleTimeUpdate)
     video.addEventListener('loadedmetadata', handleLoadedMetadata)
     video.addEventListener('play', handlePlay)
     video.addEventListener('pause', handlePause)
+    video.addEventListener('waiting', handleWaiting)
+    video.addEventListener('canplay', handleCanPlay)
+    video.addEventListener('error', handleError)
 
     return () => {
       video.removeEventListener('timeupdate', handleTimeUpdate)
       video.removeEventListener('loadedmetadata', handleLoadedMetadata)
       video.removeEventListener('play', handlePlay)
       video.removeEventListener('pause', handlePause)
+      video.removeEventListener('waiting', handleWaiting)
+      video.removeEventListener('canplay', handleCanPlay)
+      video.removeEventListener('error', handleError)
     }
-  }, [onTimeUpdate])
+  }, [onTimeUpdate, isLoaded])
 
   useEffect(() => {
     if (videoRef.current) {
@@ -117,19 +162,82 @@ export default function VideoPlayer({ videoUrl, videoPath, onTimeUpdate, duratio
   }
 
   // Video HTML5 với custom controls
+  // Tối ưu: Sử dụng streaming endpoint nếu là video local
+  const getOptimizedVideoUrl = () => {
+    const url = videoUrl || videoPath
+    if (!url) return null
+    
+    // Nếu là URL external (YouTube, Vimeo), giữ nguyên
+    if (url.includes('youtube.com') || url.includes('youtu.be') || url.includes('vimeo.com')) {
+      return url
+    }
+    
+    // Nếu là video local, chuyển sang streaming endpoint
+    if (url.startsWith('/static/uploads/videos/')) {
+      const filename = url.replace('/static/uploads/videos/', '')
+      return `/api/video/${filename}`
+    }
+    
+    // Nếu đã là streaming endpoint, giữ nguyên
+    if (url.startsWith('/api/video/')) {
+      return url
+    }
+    
+    return url
+  }
+
+  const optimizedUrl = getOptimizedVideoUrl()
+
+  // Nếu lazy loading và chưa load, hiển thị placeholder
+  if (lazy && !isLoaded) {
+    return (
+      <div 
+        ref={containerRef}
+        className="position-relative bg-black rounded shadow-sm d-flex align-items-center justify-content-center"
+        style={{ minHeight: '400px', cursor: 'pointer' }}
+        onClick={() => setIsLoaded(true)}
+      >
+        <div className="text-center text-white">
+          <i className="bi bi-play-circle" style={{ fontSize: '4rem' }}></i>
+          <p className="mt-3">Nhấn để tải video</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div 
+      ref={containerRef}
       className="position-relative bg-black rounded shadow-sm"
       onMouseEnter={() => setShowControls(true)}
       onMouseLeave={() => setShowControls(false)}
     >
+      {error && (
+        <div className="position-absolute top-50 start-50 translate-middle text-white text-center p-3">
+          <i className="bi bi-exclamation-triangle-fill text-warning" style={{ fontSize: '2rem' }}></i>
+          <p className="mt-2">{error}</p>
+          <button 
+            className="btn btn-sm btn-light mt-2"
+            onClick={() => {
+              setError(null)
+              if (videoRef.current) {
+                videoRef.current.load()
+              }
+            }}
+          >
+            Thử lại
+          </button>
+        </div>
+      )}
       <video
         ref={videoRef}
         className="w-100 rounded"
         style={{ maxHeight: '600px', display: 'block' }}
         onClick={togglePlay}
+        preload="metadata"  // Chỉ preload metadata, không tải toàn bộ video
+        playsInline  // Tối ưu cho mobile
       >
-        <source src={videoUrl || videoPath} type="video/mp4" />
+        <source src={optimizedUrl} type="video/mp4" />
         {subtitleTrack && (
           <track
             kind="subtitles"
@@ -141,6 +249,16 @@ export default function VideoPlayer({ videoUrl, videoPath, onTimeUpdate, duratio
         )}
         Trình duyệt của bạn không hỗ trợ video tag.
       </video>
+      
+      {/* Loading/Buffering indicator */}
+      {(isBuffering || (!duration && !error)) && (
+        <div className="position-absolute top-50 start-50 translate-middle text-white">
+          <div className="spinner-border" role="status">
+            <span className="visually-hidden">Đang tải video...</span>
+          </div>
+          <p className="mt-2 small">Đang tải video...</p>
+        </div>
+      )}
 
       {/* Custom Controls */}
       {showControls && (
