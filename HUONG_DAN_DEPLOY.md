@@ -27,23 +27,48 @@ Hướng dẫn chi tiết từng bước để deploy dự án lên production.
 
 ### 1.2. Lưu thông tin kết nối
 
-Sau khi tạo xong, Render sẽ hiển thị:
-- **Internal Database URL**: Dùng cho backend trên Render
-- **External Database URL**: Dùng để kết nối từ máy local (nếu cần)
+Sau khi tạo xong, Render sẽ hiển thị 2 loại connection string:
 
-**Lưu ý:** Copy **Internal Database URL** để dùng cho backend!
+#### **Internal Database URL** (Dùng cho backend trên Render)
+- Format: `postgresql://user:pass@dpg-xxxxx-a/database`
+- **Chỉ hoạt động trong Render network** (không thể kết nối từ máy local)
+- **Copy URL này để thêm vào Environment Variables của backend service**
 
-Ví dụ:
-```
-postgresql://code_do_user:password@dpg-xxxxx-a.singapore-postgres.render.com/elearning
-```
+#### **External Database URL** (Dùng để kết nối từ máy local)
+- Format: `postgresql://user:pass@dpg-xxxxx-a.singapore-postgres.render.com:5432/database`
+- Hoặc: `postgresql://user:pass@dpg-xxxxx-a.oregon-postgres.render.com:5432/database`
+- **Có thể kết nối từ máy local** (cần bật External Access)
+
+**⚠️ QUAN TRỌNG:**
+- **Backend trên Render**: Dùng **Internal Database URL**
+- **Kết nối từ máy local**: Dùng **External Database URL** (nếu cần)
+
+**Cách lấy External Database URL:**
+1. Vào database trên Render Dashboard
+2. Click tab **"Connect"** hoặc **"Info"**
+3. Tìm **"External Database URL"** (khác với Internal URL)
+4. Nếu không thấy, có thể cần bật **"External Access"** trong Settings
 
 ### 1.3. Chạy migrations trên database mới
 
-**Cách 1: Dùng psql từ máy local (nếu có PostgreSQL client)**
+**Cách 1: Dùng Render Shell (Khuyến nghị nhất - Không cần External URL)**
+
+1. Vào database trên Render Dashboard
+2. Click tab **"Connect"**
+3. Click **"Connect via psql"** → Mở Render Shell trong browser
+4. Copy và paste từng file SQL migration vào shell
+
+**Cách 2: Dùng script PowerShell từ máy local (Cần External Database URL)**
 
 ```powershell
-# Kết nối với External Database URL
+# Sử dụng External Database URL
+.\scripts\run_migrations_render.ps1 -DatabaseUrl "postgresql://user:pass@dpg-xxxxx-a.singapore-postgres.render.com:5432/database"
+```
+
+**Cách 3: Dùng psql thủ công từ máy local (Cần External Database URL)**
+
+```powershell
+# Kết nối với External Database URL (phải có đầy đủ hostname và port)
 & "C:\Program Files\PostgreSQL\18\bin\psql.exe" "postgresql://code_do_user:password@dpg-xxxxx-a.singapore-postgres.render.com:5432/elearning"
 
 # Sau đó chạy các file SQL
@@ -51,6 +76,8 @@ postgresql://code_do_user:password@dpg-xxxxx-a.singapore-postgres.render.com/ele
 \i database/create_enrollment_table.sql
 # ... các file migration khác
 ```
+
+**⚠️ Lưu ý:** Nếu gặp lỗi "could not translate host name", bạn đang dùng **Internal URL** thay vì **External URL**!
 
 **Cách 2: Dùng Render Shell (Khuyến nghị)**
 
