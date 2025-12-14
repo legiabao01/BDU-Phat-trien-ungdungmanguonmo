@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Body
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
+from typing import List
 
 from ...db.session import get_db
 from ...models.course import Course, CourseStatus, CourseMode
@@ -11,7 +13,7 @@ from ...models.user import User
 router = APIRouter()
 
 
-@router.get("/courses", response_model=list[CourseOut])
+@router.get("/courses")
 def list_courses(
     q: str | None = Query(None, description="Tìm theo tiêu đề/mô tả"),
     cap_do: str | None = Query(None, description="Lọc cấp độ (Beginner/Intermediate/Advanced)"),
@@ -55,15 +57,38 @@ def list_courses(
         
         # Đảm bảo chắc chắn là list
         if not isinstance(result, list):
-            return []
+            result = []
         
-        return result
+        # Convert sang Pydantic models để serialize đúng
+        courses_list = []
+        for course in result:
+            try:
+                course_dict = {
+                    "id": course.id,
+                    "tieu_de": course.tieu_de,
+                    "mo_ta": course.mo_ta,
+                    "cap_do": course.cap_do,
+                    "hinh_anh": course.hinh_anh,
+                    "gia": float(course.gia) if course.gia else 0.0,
+                    "gia_goc": float(course.gia_goc) if course.gia_goc else None,
+                    "so_buoi": course.so_buoi or 0,
+                    "thoi_luong": course.thoi_luong,
+                    "hinh_thuc": course.hinh_thuc.value if course.hinh_thuc else "online",
+                    "teacher_id": course.teacher_id,
+                }
+                courses_list.append(course_dict)
+            except Exception as e:
+                print(f"Error serializing course {course.id}: {e}")
+                continue
+        
+        # Trả về JSONResponse trực tiếp để đảm bảo là array
+        return JSONResponse(content=courses_list)
     except Exception as e:
         # Nếu có bất kỳ lỗi nào, trả về list rỗng
         print(f"Error fetching courses: {e}")
         import traceback
         traceback.print_exc()
-        return []
+        return JSONResponse(content=[])
 
 
 @router.get("/courses/{course_id}", response_model=CourseOut)
