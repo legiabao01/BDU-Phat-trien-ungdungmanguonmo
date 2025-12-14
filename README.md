@@ -1,6 +1,12 @@
-# 🎓 Ứng dụng Học Trực Tuyến
+# 🎓 Code Đơ - Hệ thống Học Trực Tuyến
 
-Dự án cuối kỳ môn **Phát triển ứng dụng mã nguồn mở**
+**Dự án cuối kỳ môn Phát triển ứng dụng mã nguồn mở**  
+**Giảng viên:** Lê Duy Hùng  
+**GitHub Repository:** https://github.com/legiabao01/BDU-Phat-trien-ungdungmanguonmo
+
+## 📖 Giới thiệu
+
+Code Đơ là một hệ thống học trực tuyến (E-Learning Platform) được xây dựng với FastAPI (Backend) và React (Frontend). Hệ thống hỗ trợ đầy đủ chức năng cho học viên, giáo viên và quản trị viên.
 
 ## 📋 Tổng quan
 
@@ -331,11 +337,21 @@ Sau khi seed data, có các tài khoản sau:
 - Dùng full path: `"C:\Program Files\PostgreSQL\16\bin\psql.exe"`
 - Hoặc thêm PostgreSQL vào PATH
 
-## 📚 Tài liệu tham khảo
+## 📚 Tài liệu
 
+### Tài liệu dự án
+- **Báo cáo tiểu luận:** `BAO_CAO_TIEU_LUAN.md`
+- **Coding Convention:** `CODING_CONVENTION.md`
+- **Triển khai thực tế:** `TRIEN_KHAI_THUC_TE.md`
+- **Hướng dẫn deploy:** `HUONG_DAN_DEPLOY_CHI_TIET.md`
+- **Hướng dẫn chạy dự án:** `HUONG_DAN_CHAY_DU_AN.md`
+
+### Tài liệu tham khảo
 - [FastAPI Documentation](https://fastapi.tiangolo.com/)
 - [React Documentation](https://react.dev/)
 - [PostgreSQL Documentation](https://www.postgresql.org/docs/)
+- [Render Documentation](https://render.com/docs)
+- [Vercel Documentation](https://vercel.com/docs)
 
 ## 👨‍💻 Đóng góp
 
