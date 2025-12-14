@@ -52,17 +52,21 @@ export default function Courses() {
       const [coursesRes] = await Promise.all([
         axios.get('/api/courses')
       ])
+      // Đảm bảo coursesRes.data là array
+      const coursesData = Array.isArray(coursesRes.data) ? coursesRes.data : []
+      
       setStats({
-        totalCourses: coursesRes.data.length || 0,
+        totalCourses: coursesData.length || 0,
         totalStudents: 150, // Placeholder
         totalTeachers: 25 // Placeholder
       })
       
       // Get featured courses (first 3)
-      const allCourses = coursesRes.data
-      setFeaturedCourses(allCourses.slice(0, 3))
+      setFeaturedCourses(coursesData.slice(0, 3))
     } catch (error) {
       console.error('Error fetching stats:', error)
+      // Đảm bảo featuredCourses luôn là array
+      setFeaturedCourses([])
     }
   }
 
@@ -76,11 +80,15 @@ export default function Courses() {
       if (sort) params.append('sort', sort)
 
       const response = await axios.get(`/api/courses?${params.toString()}`)
-      setCourses(response.data)
+      // Đảm bảo response.data là array trước khi set
+      const coursesData = Array.isArray(response.data) ? response.data : []
+      setCourses(coursesData)
       setError('')
     } catch (error) {
       setError('Không thể tải danh sách khóa học')
       console.error(error)
+      // Đảm bảo courses luôn là array ngay cả khi có lỗi
+      setCourses([])
     } finally {
       setLoading(false)
     }

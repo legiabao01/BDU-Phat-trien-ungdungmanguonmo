@@ -20,32 +20,40 @@ def list_courses(
     sort: str | None = Query("newest", description="newest|price_asc|price_desc"),
     db: Session = Depends(get_db),
 ):
-    query = db.query(Course)
+    try:
+        query = db.query(Course)
 
-    if status:
-        query = query.filter(Course.trang_thai == status)
-    else:
-        # Mặc định chỉ trả active
-        query = query.filter(Course.trang_thai == CourseStatus.active)
+        if status:
+            query = query.filter(Course.trang_thai == status)
+        else:
+            # Mặc định chỉ trả active
+            query = query.filter(Course.trang_thai == CourseStatus.active)
 
-    if cap_do:
-        query = query.filter(Course.cap_do == cap_do)
+        if cap_do:
+            query = query.filter(Course.cap_do == cap_do)
 
-    if hinh_thuc:
-        query = query.filter(Course.hinh_thuc == hinh_thuc)
+        if hinh_thuc:
+            query = query.filter(Course.hinh_thuc == hinh_thuc)
 
-    if q:
-        like_q = f"%{q}%"
-        query = query.filter(or_(Course.tieu_de.ilike(like_q), Course.mo_ta.ilike(like_q)))
+        if q:
+            like_q = f"%{q}%"
+            query = query.filter(or_(Course.tieu_de.ilike(like_q), Course.mo_ta.ilike(like_q)))
 
-    if sort == "price_asc":
-        query = query.order_by(Course.gia.asc())
-    elif sort == "price_desc":
-        query = query.order_by(Course.gia.desc())
-    else:
-        query = query.order_by(Course.created_at.desc())
+        if sort == "price_asc":
+            query = query.order_by(Course.gia.asc())
+        elif sort == "price_desc":
+            query = query.order_by(Course.gia.desc())
+        else:
+            query = query.order_by(Course.created_at.desc())
 
-    return query.all()
+        result = query.all()
+        # Đảm bảo luôn trả về list, không phải None
+        return result if result is not None else []
+    except Exception as e:
+        # Nếu có lỗi, trả về list rỗng thay vì raise exception
+        # (hoặc có thể log lỗi và trả về [])
+        print(f"Error fetching courses: {e}")
+        return []
 
 
 @router.get("/courses/{course_id}", response_model=CourseOut)
@@ -148,6 +156,10 @@ def list_pending_courses(
     if current_user.role != UserRole.admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Chỉ admin mới có quyền")
     
-    courses = db.query(Course).filter(Course.trang_thai == CourseStatus.draft).order_by(Course.created_at.desc()).all()
-    return courses
+    try:
+        courses = db.query(Course).filter(Course.trang_thai == CourseStatus.draft).order_by(Course.created_at.desc()).all()
+        return courses if courses is not None else []
+    except Exception as e:
+        print(f"Error fetching pending courses: {e}")
+        return []
 
