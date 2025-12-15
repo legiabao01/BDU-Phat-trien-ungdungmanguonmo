@@ -48,9 +48,18 @@ def create_app() -> FastAPI:
         default_response_class=UTF8JSONResponse
     )
 
+    # CORS: cố định danh sách origin hợp lệ; fallback gồm Vercel/Render
+    default_origins = [
+        "https://bdu-phat-trien-ungdungmanguonmo.vercel.app",
+        "https://bdu-phat-trien-ungdungmanguonmo-git-main-hangtr29s-projects.vercel.app",
+        "https://bdu-phat-trien-ungdungmanguonmo-w1rc.onrender.com",
+    ]
+    allowed_origins = settings.allowed_origins or default_origins
+
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.allowed_origins or ["*"],
+        allow_origins=allowed_origins,
+        allow_origin_regex=r"https://.*",  # bắt tất cả https origin (để tránh miss)
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
