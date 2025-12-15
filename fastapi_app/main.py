@@ -49,12 +49,12 @@ def create_app() -> FastAPI:
     )
 
     # CORS: cố định danh sách origin hợp lệ; fallback gồm Vercel/Render
-    default_origins = [
+    # Luôn bật CORS cho các domain đã deploy (không phụ thuộc env để tránh sai định dạng)
+    allowed_origins = [
         "https://bdu-phat-trien-ungdungmanguonmo.vercel.app",
         "https://bdu-phat-trien-ungdungmanguonmo-git-main-hangtr29s-projects.vercel.app",
         "https://bdu-phat-trien-ungdungmanguonmo-w1rc.onrender.com",
     ]
-    allowed_origins = settings.allowed_origins or default_origins
 
     app.add_middleware(
         CORSMiddleware,
