@@ -11,7 +11,8 @@ import os
 from .core.config import settings
 from .db.base import Base
 from .db.session import engine
-from .api.routes import auth, users, courses, content, progress, discussions, certificates, enrollments, assignments, quiz, stats, reviews, notifications, code_execution, payments, wallet, admin_wallet, assignment_notifications, teacher_dashboard, messages, video_streaming, class_schedule
+from .api.routes import auth, users, courses, content, progress, discussions, certificates, enrollments, assignments, quiz, stats, reviews, notifications, code_execution, payments, wallet, admin_wallet, assignment_notifications, teacher_dashboard, messages, video_streaming
+from .api.routes import class_schedule as class_schedule_router
 
 # Import models to register metadata with Base
 from .models import user, course, course_content  # noqa: F401
@@ -88,7 +89,7 @@ def create_app() -> FastAPI:
     app.include_router(teacher_dashboard.router, prefix="/api")
     app.include_router(messages.router, prefix="/api")
     app.include_router(video_streaming.router, prefix="/api")
-    app.include_router(class_schedule.router, prefix="/api")
+    app.include_router(class_schedule_router.router, prefix="/api")
 
     # Mount static files để serve PDF, video, và các file upload
     static_dir = "static"
