@@ -86,10 +86,10 @@ export default function MySchedule() {
   }
 
   return (
-    <div className="container my-5">
+    <div className="container my-5" style={{ fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <h1 className="title-gradient">
-          <i className="bi bi-calendar-event"></i> Thời khóa biểu của tôi
+        <h1 className="title-gradient mb-0">
+          <i className="bi bi-calendar-event me-2"></i> Thời khóa biểu của tôi
         </h1>
         <div className="btn-group">
           <button
@@ -131,75 +131,87 @@ export default function MySchedule() {
         <div>
           {Object.entries(groupedSchedules).map(([date, daySchedules]) => (
             <div key={date} className="mb-4">
-              <h5 className="mb-3 text-primary">
-                <i className="bi bi-calendar3 me-2"></i>
-                {date}
-              </h5>
-              <div className="row">
+              <div className="d-flex align-items-center mb-3 pb-2 border-bottom">
+                <i className="bi bi-calendar3 text-primary me-2" style={{ fontSize: '1.5rem' }}></i>
+                <h5 className="mb-0 text-primary fw-bold">{date}</h5>
+              </div>
+              <div className="row g-3">
                 {daySchedules.map((schedule) => {
                   const upcoming = isUpcoming(schedule.ngay_hoc)
                   return (
-                    <div key={schedule.id} className="col-md-6 mb-3">
-                      <div className={`card h-100 ${upcoming ? 'border-primary shadow-sm' : 'border-secondary'}`}>
-                        <div className={`card-header ${upcoming ? 'bg-primary text-white' : 'bg-secondary text-white'}`}>
+                    <div key={schedule.id} className="col-lg-6 col-md-12">
+                      <div className={`card h-100 shadow-sm ${upcoming ? 'border-primary border-2' : 'border-secondary'}`} style={{ transition: 'all 0.3s ease' }}>
+                        <div className={`card-header ${upcoming ? 'bg-primary text-white' : 'bg-secondary text-white'} py-2`}>
                           <div className="d-flex justify-content-between align-items-center">
-                            <h6 className="mb-0">
+                            <h6 className="mb-0 fw-bold" style={{ fontSize: '0.95rem' }}>
                               <i className="bi bi-book me-2"></i>
                               {schedule.tieu_de}
                             </h6>
-                            {upcoming && (
-                              <span className="badge bg-light text-primary">
-                                <i className="bi bi-clock me-1"></i>
-                                Sắp tới
-                              </span>
-                            )}
-                            {schedule.is_completed && (
-                              <span className="badge bg-success">Đã hoàn thành</span>
-                            )}
+                            <div>
+                              {upcoming && (
+                                <span className="badge bg-light text-primary ms-2">
+                                  <i className="bi bi-clock me-1"></i>
+                                  Sắp tới
+                                </span>
+                              )}
+                              {schedule.is_completed && (
+                                <span className="badge bg-success ms-2">Đã hoàn thành</span>
+                              )}
+                            </div>
                           </div>
                         </div>
-                        <div className="card-body">
-                          <p className="mb-2">
-                            <i className="bi bi-clock-history me-1"></i>
-                            <strong>{formatDate(schedule.ngay_hoc)}</strong>
+                        <div className="card-body p-3">
+                          <div className="mb-3">
+                            <div className="d-flex align-items-center mb-2">
+                              <i className="bi bi-calendar-check text-primary me-2"></i>
+                              <span className="fw-semibold" style={{ fontSize: '0.9rem' }}>
+                                {formatDate(schedule.ngay_hoc)}
+                              </span>
+                            </div>
                             {schedule.thoi_gian_bat_dau && schedule.thoi_gian_ket_thuc ? (
-                              <span className="ms-2">
-                                <strong className="text-primary">{schedule.thoi_gian_bat_dau} - {schedule.thoi_gian_ket_thuc}</strong>
-                              </span>
+                              <div className="d-flex align-items-center">
+                                <i className="bi bi-clock text-success me-2"></i>
+                                <span className="badge bg-success-subtle text-success-emphasis px-3 py-2" style={{ fontSize: '0.9rem' }}>
+                                  <strong>{schedule.thoi_gian_bat_dau}</strong> - <strong>{schedule.thoi_gian_ket_thuc}</strong>
+                                </span>
+                              </div>
                             ) : (
-                              <span className="ms-2 text-muted">
-                                lúc {formatTime(schedule.ngay_hoc)}
-                              </span>
+                              <div className="d-flex align-items-center">
+                                <i className="bi bi-clock text-muted me-2"></i>
+                                <span className="text-muted small">lúc {formatTime(schedule.ngay_hoc)}</span>
+                              </div>
                             )}
-                          </p>
+                          </div>
                           
                           {schedule.mo_ta && (
-                            <p className="text-muted mb-3">{schedule.mo_ta}</p>
+                            <p className="text-muted mb-3 small" style={{ lineHeight: '1.6' }}>{schedule.mo_ta}</p>
                           )}
 
                           {schedule.khoa_hoc && (
-                            <p className="mb-2">
-                              <i className="bi bi-mortarboard me-1"></i>
-                              Khóa học: <Link to={`/courses/${schedule.khoa_hoc_id}`}>{schedule.khoa_hoc.tieu_de}</Link>
-                            </p>
+                            <div className="mb-3">
+                              <i className="bi bi-mortarboard text-info me-2"></i>
+                              <span className="small">Khóa học: </span>
+                              <Link to={`/courses/${schedule.khoa_hoc_id}`} className="text-decoration-none fw-semibold">
+                                {schedule.khoa_hoc.tieu_de}
+                              </Link>
+                            </div>
                           )}
 
                           {schedule.ghi_chu && (
-                            <div className="alert alert-light py-2 mb-3">
-                              <small>
-                                <i className="bi bi-info-circle me-1"></i>
-                                <strong>Ghi chú:</strong> {schedule.ghi_chu}
-                              </small>
+                            <div className="alert alert-info py-2 mb-3" style={{ fontSize: '0.85rem' }}>
+                              <i className="bi bi-info-circle me-1"></i>
+                              <strong>Ghi chú:</strong> {schedule.ghi_chu}
                             </div>
                           )}
 
                           {upcoming && schedule.link_google_meet && (
-                            <div className="d-grid gap-2">
+                            <div className="d-grid gap-2 mt-3">
                               <a
                                 href={schedule.link_google_meet}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="btn btn-danger"
+                                className="btn btn-danger fw-semibold"
+                                style={{ borderRadius: '8px' }}
                               >
                                 <i className="bi bi-camera-video-fill me-2"></i>
                                 Vào lớp học ngay (Google Meet)
@@ -209,7 +221,8 @@ export default function MySchedule() {
                                   href={schedule.link_zoom}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="btn btn-info"
+                                  className="btn btn-info fw-semibold"
+                                  style={{ borderRadius: '8px' }}
                                 >
                                   <i className="bi bi-camera-video me-2"></i>
                                   Hoặc vào Zoom

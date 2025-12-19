@@ -107,13 +107,29 @@ export default function CourseScheduleManager({ courseId, courseTitle }) {
     setShowForm(false)
   }
 
-  const formatDateTime = (dateStr) => {
+  const formatDateOnly = (dateStr) => {
     const date = new Date(dateStr)
-    return date.toLocaleString('vi-VN', {
+    return date.toLocaleDateString('vi-VN', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
-      day: 'numeric',
+      day: 'numeric'
+    })
+  }
+
+  const formatDate = (dateStr) => {
+    const date = new Date(dateStr)
+    return date.toLocaleDateString('vi-VN', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
+  }
+
+  const formatTime = (dateStr) => {
+    const date = new Date(dateStr)
+    return date.toLocaleTimeString('vi-VN', {
       hour: '2-digit',
       minute: '2-digit'
     })
@@ -274,89 +290,109 @@ export default function CourseScheduleManager({ courseId, courseTitle }) {
           Chưa có lịch học nào. Hãy thêm lịch học để học sinh biết khi nào học.
         </div>
       ) : (
-        <div className="row">
-          {schedules.map((schedule) => (
-            <div key={schedule.id} className="col-md-6 mb-3">
-              <div className={`card h-100 ${isUpcoming(schedule.ngay_hoc) ? 'border-primary' : 'border-secondary'}`}>
-                <div className={`card-header ${isUpcoming(schedule.ngay_hoc) ? 'bg-primary text-white' : 'bg-secondary text-white'}`}>
-                  <div className="d-flex justify-content-between align-items-center">
-                    <h6 className="mb-0">
-                      <i className="bi bi-calendar3 me-2"></i>
-                      {schedule.tieu_de}
-                    </h6>
-                    {schedule.is_completed && (
-                      <span className="badge bg-success">Đã hoàn thành</span>
-                    )}
-                  </div>
-                </div>
-                <div className="card-body">
-                  <p className="text-muted mb-2">
-                    <i className="bi bi-clock me-1"></i>
-                    {formatDateTime(schedule.ngay_hoc)}
-                    {schedule.thoi_gian_bat_dau && schedule.thoi_gian_ket_thuc && (
-                      <span className="ms-2">
-                        ({schedule.thoi_gian_bat_dau} - {schedule.thoi_gian_ket_thuc})
-                      </span>
-                    )}
-                  </p>
-                  {schedule.mo_ta && (
-                    <p className="mb-2">{schedule.mo_ta}</p>
-                  )}
-                  {schedule.link_google_meet && (
-                    <div className="mb-2">
-                      <a
-                        href={schedule.link_google_meet}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="btn btn-sm btn-danger"
-                      >
-                        <i className="bi bi-camera-video-fill me-1"></i>
-                        Vào Google Meet
-                      </a>
-                    </div>
-                  )}
-                  {schedule.link_zoom && (
-                    <div className="mb-2">
-                      <a
-                        href={schedule.link_zoom}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="btn btn-sm btn-info btn-sm"
-                      >
-                        <i className="bi bi-camera-video me-1"></i>
-                        Vào Zoom
-                      </a>
-                    </div>
-                  )}
-                  {schedule.ghi_chu && (
-                    <div className="alert alert-light py-2 mb-0">
-                      <small><strong>Ghi chú:</strong> {schedule.ghi_chu}</small>
-                    </div>
-                  )}
-                </div>
-                {isTeacher && (
-                  <div className="card-footer bg-transparent">
-                    <div className="btn-group w-100">
-                      <button
-                        className="btn btn-sm btn-outline-primary"
-                        onClick={() => handleEdit(schedule)}
-                      >
-                        <i className="bi bi-pencil me-1"></i>
-                        Sửa
-                      </button>
-                      <button
-                        className="btn btn-sm btn-outline-danger"
-                        onClick={() => handleDelete(schedule.id)}
-                      >
-                        <i className="bi bi-trash me-1"></i>
-                        Xóa
-                      </button>
+        <div className="row g-3">
+          {schedules.map((schedule) => {
+            const upcoming = isUpcoming(schedule.ngay_hoc)
+            return (
+              <div key={schedule.id} className="col-lg-6 col-md-12">
+                <div className={`card h-100 shadow-sm ${upcoming ? 'border-primary border-2' : 'border-secondary'}`} style={{ transition: 'all 0.3s ease' }}>
+                  <div className={`card-header ${upcoming ? 'bg-primary text-white' : 'bg-secondary text-white'} py-2`}>
+                    <div className="d-flex justify-content-between align-items-center">
+                      <h6 className="mb-0 fw-bold" style={{ fontSize: '0.95rem' }}>
+                        <i className="bi bi-calendar3 me-2"></i>
+                        {schedule.tieu_de}
+                      </h6>
+                      {schedule.is_completed && (
+                        <span className="badge bg-success">Đã hoàn thành</span>
+                      )}
                     </div>
                   </div>
-                )}
+                  <div className="card-body p-3">
+                    <div className="mb-3">
+                      <div className="d-flex align-items-center mb-2">
+                        <i className="bi bi-calendar-check text-primary me-2"></i>
+                        <span className="fw-semibold" style={{ fontSize: '0.9rem' }}>
+                          {formatDateOnly(schedule.ngay_hoc)}
+                        </span>
+                      </div>
+                      {schedule.thoi_gian_bat_dau && schedule.thoi_gian_ket_thuc ? (
+                        <div className="d-flex align-items-center">
+                          <i className="bi bi-clock text-success me-2"></i>
+                          <span className="badge bg-success-subtle text-success-emphasis px-3 py-2" style={{ fontSize: '0.9rem' }}>
+                            <strong>{schedule.thoi_gian_bat_dau}</strong> - <strong>{schedule.thoi_gian_ket_thuc}</strong>
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="d-flex align-items-center">
+                          <i className="bi bi-clock text-muted me-2"></i>
+                          <span className="text-muted small">lúc {formatTime(schedule.ngay_hoc)}</span>
+                        </div>
+                      )}
+                    </div>
+                    {schedule.mo_ta && (
+                      <p className="text-muted mb-3 small" style={{ lineHeight: '1.6' }}>{schedule.mo_ta}</p>
+                    )}
+                    {schedule.link_google_meet && (
+                      <div className="mb-2">
+                        <a
+                          href={schedule.link_google_meet}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-sm btn-danger fw-semibold"
+                          style={{ borderRadius: '6px' }}
+                        >
+                          <i className="bi bi-camera-video-fill me-1"></i>
+                          Vào Google Meet
+                        </a>
+                      </div>
+                    )}
+                    {schedule.link_zoom && (
+                      <div className="mb-2">
+                        <a
+                          href={schedule.link_zoom}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-sm btn-info fw-semibold"
+                          style={{ borderRadius: '6px' }}
+                        >
+                          <i className="bi bi-camera-video me-1"></i>
+                          Vào Zoom
+                        </a>
+                      </div>
+                    )}
+                    {schedule.ghi_chu && (
+                      <div className="alert alert-info py-2 mb-0" style={{ fontSize: '0.85rem' }}>
+                        <i className="bi bi-info-circle me-1"></i>
+                        <strong>Ghi chú:</strong> {schedule.ghi_chu}
+                      </div>
+                    )}
+                  </div>
+                  {isTeacher && (
+                    <div className="card-footer bg-transparent py-2">
+                      <div className="btn-group w-100">
+                        <button
+                          className="btn btn-sm btn-outline-primary"
+                          onClick={() => handleEdit(schedule)}
+                          style={{ borderRadius: '6px 0 0 6px' }}
+                        >
+                          <i className="bi bi-pencil me-1"></i>
+                          Sửa
+                        </button>
+                        <button
+                          className="btn btn-sm btn-outline-danger"
+                          onClick={() => handleDelete(schedule.id)}
+                          style={{ borderRadius: '0 6px 6px 0' }}
+                        >
+                          <i className="bi bi-trash me-1"></i>
+                          Xóa
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>
