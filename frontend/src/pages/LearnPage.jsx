@@ -7,7 +7,6 @@ import QuizCreator from '../components/QuizCreator'
 import CodingPlayground from '../components/CodingPlayground'
 import LessonResourcesEditor from '../components/LessonResourcesEditor'
 import VideoPlayer from '../components/VideoPlayer'
-import CourseScheduleManager from '../components/CourseScheduleManager'
 
 // Discussion Section Component
 function DiscussionSection({ courseId, teacher }) {
@@ -1204,14 +1203,6 @@ export default function LearnPage() {
               >
                 <i className="bi bi-code-square"></i> Coding Playground
               </button>
-              {(isTeacher || user?.role === 'student') && (
-                <button
-                  className={`nav-link text-start ${activeSection === 'schedule' ? 'active' : ''}`}
-                  onClick={() => setActiveSection('schedule')}
-                >
-                  <i className="bi bi-calendar-event"></i> Thời khóa biểu
-                </button>
-              )}
             </nav>
 
             {/* Lesson Tree */}
@@ -1647,13 +1638,6 @@ export default function LearnPage() {
           {/* Section: Thảo luận */}
           {activeSection === 'discussion' && (
             <DiscussionSection courseId={courseId} teacher={teacher} />
-          )}
-
-          {/* Section: Thời khóa biểu */}
-          {activeSection === 'schedule' && (
-            <div className="card-soft mb-4">
-              <CourseScheduleManager courseId={parseInt(courseId)} courseTitle={course?.tieu_de || 'Khóa học'} />
-            </div>
           )}
         </div>
       </div>

@@ -208,10 +208,6 @@ export default function MySchedule() {
                             )}
                           </div>
                           
-                          {schedule.mo_ta && (
-                            <p className="schedule-description mb-3">{schedule.mo_ta}</p>
-                          )}
-
                           {schedule.khoa_hoc && (
                             <div className="mb-3">
                               <i className="bi bi-mortarboard text-info me-2"></i>
@@ -219,13 +215,6 @@ export default function MySchedule() {
                               <Link to={`/courses/${schedule.khoa_hoc_id}`} className="text-decoration-none fw-semibold">
                                 {schedule.khoa_hoc.tieu_de}
                               </Link>
-                            </div>
-                          )}
-
-                          {schedule.ghi_chu && (
-                            <div className="schedule-note mb-3">
-                              <i className="bi bi-info-circle me-1"></i>
-                              <strong>Ghi chú:</strong> {schedule.ghi_chu}
                             </div>
                           )}
 

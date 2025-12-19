@@ -4,7 +4,8 @@ import { useAuth } from '../context/AuthContext'
 
 export default function CourseScheduleManager({ courseId, courseTitle }) {
   const { user } = useAuth()
-  const isTeacher = user?.role === 'teacher'
+  const userRole = user?.role || user?.vai_tro
+  const isTeacher = userRole === 'teacher'
   const [schedules, setSchedules] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -67,14 +68,10 @@ export default function CourseScheduleManager({ courseId, courseTitle }) {
     const dateStr = date.toISOString().slice(0, 16) // Format: YYYY-MM-DDTHH:mm
     setFormData({
       tieu_de: schedule.tieu_de || '',
-      mo_ta: schedule.mo_ta || '',
       ngay_hoc: dateStr,
       thoi_gian_bat_dau: schedule.thoi_gian_bat_dau || '',
       thoi_gian_ket_thuc: schedule.thoi_gian_ket_thuc || '',
-      link_google_meet: schedule.link_google_meet || '',
-      link_zoom: schedule.link_zoom || '',
-      link_khac: schedule.link_khac || '',
-      ghi_chu: schedule.ghi_chu || ''
+      link_google_meet: schedule.link_google_meet || ''
     })
     setShowForm(true)
   }
@@ -94,14 +91,10 @@ export default function CourseScheduleManager({ courseId, courseTitle }) {
   const resetForm = () => {
     setFormData({
       tieu_de: '',
-      mo_ta: '',
       ngay_hoc: '',
       thoi_gian_bat_dau: '',
       thoi_gian_ket_thuc: '',
-      link_google_meet: '',
-      link_zoom: '',
-      link_khac: '',
-      ghi_chu: ''
+      link_google_meet: ''
     })
     setEditingSchedule(null)
     setShowForm(false)
@@ -186,16 +179,6 @@ export default function CourseScheduleManager({ courseId, courseTitle }) {
                     placeholder="Ví dụ: Buổi 1 - Giới thiệu Python"
                   />
                 </div>
-                <div className="col-md-12">
-                  <label className="form-label">Mô tả nội dung</label>
-                  <textarea
-                    rows="2"
-                    className="form-control"
-                    value={formData.mo_ta}
-                    onChange={(e) => setFormData({ ...formData, mo_ta: e.target.value })}
-                    placeholder="Nội dung sẽ học trong buổi này..."
-                  />
-                </div>
                 <div className="col-md-6">
                   <label className="form-label">Ngày giờ học *</label>
                   <input
@@ -238,35 +221,6 @@ export default function CourseScheduleManager({ courseId, courseTitle }) {
                     onChange={(e) => setFormData({ ...formData, link_google_meet: e.target.value })}
                     placeholder="https://meet.google.com/xxx-xxxx-xxx"
                     required
-                  />
-                </div>
-                <div className="col-md-6">
-                  <label className="form-label">Link Zoom (tùy chọn)</label>
-                  <input
-                    type="url"
-                    className="form-control"
-                    value={formData.link_zoom}
-                    onChange={(e) => setFormData({ ...formData, link_zoom: e.target.value })}
-                    placeholder="https://zoom.us/j/xxx"
-                  />
-                </div>
-                <div className="col-md-6">
-                  <label className="form-label">Link khác (tùy chọn)</label>
-                  <input
-                    type="url"
-                    className="form-control"
-                    value={formData.link_khac}
-                    onChange={(e) => setFormData({ ...formData, link_khac: e.target.value })}
-                  />
-                </div>
-                <div className="col-md-12">
-                  <label className="form-label">Ghi chú</label>
-                  <textarea
-                    rows="2"
-                    className="form-control"
-                    value={formData.ghi_chu}
-                    onChange={(e) => setFormData({ ...formData, ghi_chu: e.target.value })}
-                    placeholder="Ghi chú thêm cho học sinh..."
                   />
                 </div>
               </div>

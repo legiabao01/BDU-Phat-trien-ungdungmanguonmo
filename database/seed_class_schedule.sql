@@ -15,10 +15,14 @@ BEGIN
     
     -- Nếu có khóa học và học viên, tạo enrollment và thời khóa biểu
     IF v_course_id IS NOT NULL AND v_student_id IS NOT NULL THEN
-        -- Đảm bảo học viên đã đăng ký khóa học
-        INSERT INTO enrollments (student_id, khoa_hoc_id, trang_thai, ngay_dang_ky)
-        VALUES (v_student_id, v_course_id, 'active', NOW())
-        ON CONFLICT (student_id, khoa_hoc_id) DO NOTHING;
+        -- Đảm bảo học viên đã đăng ký khóa học (kiểm tra trước khi insert)
+        IF NOT EXISTS (
+            SELECT 1 FROM dang_ky_khoa_hoc 
+            WHERE user_id = v_student_id AND khoa_hoc_id = v_course_id
+        ) THEN
+            INSERT INTO dang_ky_khoa_hoc (user_id, khoa_hoc_id, trang_thai, ngay_dang_ky)
+            VALUES (v_student_id, v_course_id, 'active', NOW());
+        END IF;
         
         -- Tạo thời khóa biểu cho khóa học
         -- Buổi 1: Hôm nay + 2 ngày, 19:00-21:00
@@ -120,7 +124,7 @@ SELECT
     u.email as hoc_vien
 FROM thoi_khoa_bieu tkb
 JOIN khoa_hoc kh ON tkb.khoa_hoc_id = kh.id
-LEFT JOIN enrollments e ON e.khoa_hoc_id = kh.id
-LEFT JOIN users u ON e.student_id = u.id AND u.email = 'student@example.com'
+LEFT JOIN dang_ky_khoa_hoc e ON e.khoa_hoc_id = kh.id
+LEFT JOIN users u ON e.user_id = u.id AND u.email = 'student@example.com'
 ORDER BY tkb.ngay_hoc;
 
