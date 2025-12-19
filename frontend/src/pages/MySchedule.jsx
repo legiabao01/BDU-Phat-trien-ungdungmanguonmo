@@ -25,6 +25,16 @@ export default function MySchedule() {
     }
   }
 
+  const formatDate = (dateStr) => {
+    const date = new Date(dateStr)
+    return date.toLocaleDateString('vi-VN', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
+  }
+
   const formatDateTime = (dateStr) => {
     const date = new Date(dateStr)
     return date.toLocaleString('vi-VN', {
@@ -32,6 +42,14 @@ export default function MySchedule() {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+
+  const formatTime = (dateStr) => {
+    const date = new Date(dateStr)
+    return date.toLocaleTimeString('vi-VN', {
       hour: '2-digit',
       minute: '2-digit'
     })
@@ -143,10 +161,14 @@ export default function MySchedule() {
                         <div className="card-body">
                           <p className="mb-2">
                             <i className="bi bi-clock-history me-1"></i>
-                            <strong>{formatDateTime(schedule.ngay_hoc)}</strong>
-                            {schedule.thoi_gian_bat_dau && schedule.thoi_gian_ket_thuc && (
+                            <strong>{formatDate(schedule.ngay_hoc)}</strong>
+                            {schedule.thoi_gian_bat_dau && schedule.thoi_gian_ket_thuc ? (
+                              <span className="ms-2">
+                                <strong className="text-primary">{schedule.thoi_gian_bat_dau} - {schedule.thoi_gian_ket_thuc}</strong>
+                              </span>
+                            ) : (
                               <span className="ms-2 text-muted">
-                                ({schedule.thoi_gian_bat_dau} - {schedule.thoi_gian_ket_thuc})
+                                lúc {formatTime(schedule.ngay_hoc)}
                               </span>
                             )}
                           </p>
