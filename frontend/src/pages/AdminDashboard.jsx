@@ -23,9 +23,39 @@ export default function AdminDashboard() {
   const [revenueByCourse, setRevenueByCourse] = useState([])
   const [totalRevenue, setTotalRevenue] = useState({ tong_doanh_thu: 0, tong_so_giao_dich: 0 })
 
+  // Tạo/chỉnh sửa khóa học
+  const [showCreateForm, setShowCreateForm] = useState(false)
+  const [editingCourse, setEditingCourse] = useState(null)
+  const [teachers, setTeachers] = useState([])
+  const [newCourse, setNewCourse] = useState({
+    tieu_de: '',
+    mo_ta: '',
+    cap_do: 'Beginner',
+    hinh_anh: '',
+    gia: 0,
+    gia_goc: null,
+    so_buoi: 0,
+    thoi_luong: '',
+    hinh_thuc: 'online',
+    teacher_id: null
+  })
+
   useEffect(() => {
     fetchData()
+    if (activeTab === 'courses') {
+      fetchTeachers()
+    }
   }, [activeTab])
+
+  const fetchTeachers = async () => {
+    try {
+      const res = await axios.get('/api/users')
+      const teachersList = res.data.filter(u => u.role === 'teacher')
+      setTeachers(teachersList)
+    } catch (error) {
+      console.error('Failed to fetch teachers:', error)
+    }
+  }
 
   const fetchData = async () => {
     try {
@@ -122,6 +152,86 @@ export default function AdminDashboard() {
     } finally {
       setActionLoading({ ...actionLoading, [`status-${courseId}`]: false })
     }
+  }
+
+  const handleCreateCourse = async (e) => {
+    e.preventDefault()
+    setActionLoading({ ...actionLoading, create: true })
+    try {
+      const payload = {
+        ...newCourse,
+        gia: Number(newCourse.gia) || 0,
+        gia_goc: newCourse.gia_goc ? Number(newCourse.gia_goc) : null,
+        so_buoi: Number(newCourse.so_buoi) || 0,
+        teacher_id: newCourse.teacher_id || null
+      }
+      await axios.post('/api/courses', payload)
+      alert('Tạo khóa học thành công! Khóa học sẽ ở trạng thái bản nháp.')
+      resetCourseForm()
+      fetchData()
+    } catch (error) {
+      alert('Tạo khóa học thất bại: ' + (error.response?.data?.detail || error.message))
+    } finally {
+      setActionLoading({ ...actionLoading, create: false })
+    }
+  }
+
+  const handleEditCourse = (course) => {
+    setEditingCourse(course)
+    setNewCourse({
+      tieu_de: course.tieu_de || '',
+      mo_ta: course.mo_ta || '',
+      cap_do: course.cap_do || 'Beginner',
+      hinh_anh: course.hinh_anh || '',
+      gia: course.gia || 0,
+      gia_goc: course.gia_goc || null,
+      so_buoi: course.so_buoi || 0,
+      thoi_luong: course.thoi_luong || '',
+      hinh_thuc: course.hinh_thuc || 'online',
+      teacher_id: course.teacher_id || null
+    })
+    setShowCreateForm(true)
+  }
+
+  const handleUpdateCourse = async (e) => {
+    e.preventDefault()
+    if (!editingCourse) return
+    
+    setActionLoading({ ...actionLoading, update: true })
+    try {
+      const payload = {
+        ...newCourse,
+        gia: Number(newCourse.gia) || 0,
+        gia_goc: newCourse.gia_goc ? Number(newCourse.gia_goc) : null,
+        so_buoi: Number(newCourse.so_buoi) || 0,
+        teacher_id: newCourse.teacher_id || null
+      }
+      await axios.put(`/api/admin/courses/${editingCourse.id}`, payload)
+      alert('Cập nhật khóa học thành công!')
+      resetCourseForm()
+      fetchData()
+    } catch (error) {
+      alert('Cập nhật khóa học thất bại: ' + (error.response?.data?.detail || error.message))
+    } finally {
+      setActionLoading({ ...actionLoading, update: false })
+    }
+  }
+
+  const resetCourseForm = () => {
+    setNewCourse({
+      tieu_de: '',
+      mo_ta: '',
+      cap_do: 'Beginner',
+      hinh_anh: '',
+      gia: 0,
+      gia_goc: null,
+      so_buoi: 0,
+      thoi_luong: '',
+      hinh_thuc: 'online',
+      teacher_id: null
+    })
+    setEditingCourse(null)
+    setShowCreateForm(false)
   }
 
   const handleUpdateUserStatus = async (userId, isActive) => {
@@ -300,6 +410,170 @@ export default function AdminDashboard() {
       {/* Courses Tab */}
       {activeTab === 'courses' && (
         <div className="row">
+          {/* Create/Edit Course Form */}
+          {showCreateForm && (
+            <div className="col-12 mb-4">
+              <div className="card-soft border-primary">
+                <div className="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                  <h5 className="mb-0">
+                    <i className="bi bi-plus-circle me-2"></i>
+                    {editingCourse ? 'Chỉnh sửa khóa học' : 'Tạo khóa học mới'}
+                  </h5>
+                  <button
+                    className="btn btn-sm btn-light"
+                    onClick={resetCourseForm}
+                  >
+                    <i className="bi bi-x-lg"></i>
+                  </button>
+                </div>
+                <div className="card-body">
+                  <form onSubmit={editingCourse ? handleUpdateCourse : handleCreateCourse}>
+                    <div className="row g-3">
+                      <div className="col-md-6">
+                        <label className="form-label">Tên khóa học *</label>
+                        <input
+                          type="text"
+                          className="form-control"
+                          value={newCourse.tieu_de}
+                          onChange={(e) => setNewCourse({ ...newCourse, tieu_de: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div className="col-md-6">
+                        <label className="form-label">Cấp độ</label>
+                        <select
+                          className="form-select"
+                          value={newCourse.cap_do}
+                          onChange={(e) => setNewCourse({ ...newCourse, cap_do: e.target.value })}
+                        >
+                          <option value="Beginner">Beginner</option>
+                          <option value="Intermediate">Intermediate</option>
+                          <option value="Advanced">Advanced</option>
+                        </select>
+                      </div>
+                      <div className="col-md-12">
+                        <label className="form-label">Mô tả</label>
+                        <textarea
+                          rows="3"
+                          className="form-control"
+                          value={newCourse.mo_ta}
+                          onChange={(e) => setNewCourse({ ...newCourse, mo_ta: e.target.value })}
+                        />
+                      </div>
+                      <div className="col-md-4">
+                        <label className="form-label">Giá (VND)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          className="form-control"
+                          value={newCourse.gia}
+                          onChange={(e) => setNewCourse({ ...newCourse, gia: e.target.value })}
+                        />
+                      </div>
+                      <div className="col-md-4">
+                        <label className="form-label">Giá gốc (VND)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          className="form-control"
+                          value={newCourse.gia_goc || ''}
+                          onChange={(e) => setNewCourse({ ...newCourse, gia_goc: e.target.value || null })}
+                        />
+                      </div>
+                      <div className="col-md-4">
+                        <label className="form-label">Số buổi</label>
+                        <input
+                          type="number"
+                          min="0"
+                          className="form-control"
+                          value={newCourse.so_buoi}
+                          onChange={(e) => setNewCourse({ ...newCourse, so_buoi: e.target.value })}
+                        />
+                      </div>
+                      <div className="col-md-4">
+                        <label className="form-label">Thời lượng</label>
+                        <input
+                          type="text"
+                          className="form-control"
+                          placeholder="Ví dụ: 8 tuần, 20 giờ..."
+                          value={newCourse.thoi_luong}
+                          onChange={(e) => setNewCourse({ ...newCourse, thoi_luong: e.target.value })}
+                        />
+                      </div>
+                      <div className="col-md-4">
+                        <label className="form-label">Hình thức</label>
+                        <select
+                          className="form-select"
+                          value={newCourse.hinh_thuc}
+                          onChange={(e) => setNewCourse({ ...newCourse, hinh_thuc: e.target.value })}
+                        >
+                          <option value="online">Online</option>
+                          <option value="offline">Offline</option>
+                          <option value="hybrid">Hybrid</option>
+                        </select>
+                      </div>
+                      <div className="col-md-4">
+                        <label className="form-label">Giáo viên</label>
+                        <select
+                          className="form-select"
+                          value={newCourse.teacher_id || ''}
+                          onChange={(e) => setNewCourse({ ...newCourse, teacher_id: e.target.value ? Number(e.target.value) : null })}
+                        >
+                          <option value="">-- Chọn giáo viên --</option>
+                          {teachers.map((teacher) => (
+                            <option key={teacher.id} value={teacher.id}>
+                              {teacher.ho_ten} ({teacher.email})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="col-md-12">
+                        <label className="form-label">Link ảnh khóa học</label>
+                        <input
+                          type="text"
+                          className="form-control"
+                          placeholder="https://..."
+                          value={newCourse.hinh_anh}
+                          onChange={(e) => setNewCourse({ ...newCourse, hinh_anh: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div className="mt-3 d-flex justify-content-end gap-2">
+                      <button
+                        type="button"
+                        className="btn btn-outline-secondary"
+                        onClick={resetCourseForm}
+                        disabled={actionLoading.create || actionLoading.update}
+                      >
+                        Hủy
+                      </button>
+                      <button
+                        type="submit"
+                        className="btn btn-primary"
+                        disabled={actionLoading.create || actionLoading.update}
+                      >
+                        {actionLoading.create || actionLoading.update ? 'Đang xử lý...' : editingCourse ? 'Cập nhật' : 'Tạo khóa học'}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Button Tạo khóa học */}
+          {!showCreateForm && (
+            <div className="col-12 mb-3">
+              <button
+                className="btn btn-primary"
+                onClick={() => setShowCreateForm(true)}
+              >
+                <i className="bi bi-plus-circle me-2"></i>
+                Tạo khóa học mới
+              </button>
+            </div>
+          )}
+
           {/* Pending Courses */}
           {pendingCourses.length > 0 && (
             <div className="col-12 mb-4">
@@ -379,6 +653,13 @@ export default function AdminDashboard() {
                         <td>{new Intl.NumberFormat('vi-VN').format(course.gia)} VNĐ</td>
                         <td>
                           <div className="btn-group">
+                            <button
+                              className="btn btn-sm btn-outline-primary"
+                              onClick={() => handleEditCourse(course)}
+                              title="Chỉnh sửa"
+                            >
+                              <i className="bi bi-pencil"></i>
+                            </button>
                             <select
                               className="form-select form-select-sm"
                               value={course.trang_thai}

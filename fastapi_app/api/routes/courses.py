@@ -180,6 +180,41 @@ def update_course_status(
     return course
 
 
+@router.put("/admin/courses/{course_id}", response_model=CourseOut)
+def update_course(
+    course_id: int,
+    payload: CourseCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Chỉnh sửa nội dung khóa học - chỉ admin"""
+    from ...models.user import UserRole
+    
+    if current_user.role != UserRole.admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Chỉ admin mới có quyền")
+    
+    course = db.query(Course).filter(Course.id == course_id).first()
+    if not course:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Khóa học không tồn tại")
+    
+    # Cập nhật các trường
+    course.tieu_de = payload.tieu_de
+    course.mo_ta = payload.mo_ta
+    course.cap_do = payload.cap_do
+    course.hinh_anh = payload.hinh_anh
+    course.gia = payload.gia
+    course.gia_goc = payload.gia_goc
+    course.so_buoi = payload.so_buoi
+    course.thoi_luong = payload.thoi_luong
+    course.hinh_thuc = payload.hinh_thuc
+    if payload.teacher_id:
+        course.teacher_id = payload.teacher_id
+    
+    db.commit()
+    db.refresh(course)
+    return course
+
+
 @router.get("/admin/courses/pending", response_model=list[CourseOut])
 def list_pending_courses(
     db: Session = Depends(get_db),
