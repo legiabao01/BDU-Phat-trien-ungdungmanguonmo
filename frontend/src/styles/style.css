@@ -45,6 +45,80 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
+/* Schedule Styles - Cải thiện UI thời khóa biểu */
+.schedule-container {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+}
+
+.schedule-card {
+    border-radius: 12px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+    transition: all 0.3s ease !important;
+    border: 2px solid transparent !important;
+}
+
+.schedule-card:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15) !important;
+    transform: translateY(-2px) !important;
+}
+
+.schedule-card.upcoming {
+    border-color: #0d6efd !important;
+}
+
+.schedule-card-header {
+    border-radius: 12px 12px 0 0 !important;
+    padding: 12px 16px !important;
+    font-weight: 600 !important;
+}
+
+.schedule-time-badge {
+    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%) !important;
+    color: #065f46 !important;
+    padding: 8px 16px !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    font-size: 0.9rem !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+}
+
+.schedule-date-header {
+    font-size: 1.1rem !important;
+    font-weight: 700 !important;
+    color: #0d6efd !important;
+    padding-bottom: 8px !important;
+    border-bottom: 2px solid #e5e7eb !important;
+    margin-bottom: 16px !important;
+}
+
+.schedule-description {
+    color: #6b7280 !important;
+    line-height: 1.7 !important;
+    font-size: 0.9rem !important;
+}
+
+.schedule-note {
+    background: #eff6ff !important;
+    border-left: 4px solid #3b82f6 !important;
+    padding: 10px 12px !important;
+    border-radius: 6px !important;
+    font-size: 0.85rem !important;
+}
+
+.schedule-join-btn {
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    padding: 10px 20px !important;
+    transition: all 0.2s ease !important;
+}
+
+.schedule-join-btn:hover {
+    transform: scale(1.02) !important;
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3) !important;
+}
+
 /* Header Styles */
 .navbar-brand {
     font-size: 1.5rem;

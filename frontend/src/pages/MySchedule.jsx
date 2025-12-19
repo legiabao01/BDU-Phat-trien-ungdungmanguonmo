@@ -111,7 +111,7 @@ export default function MySchedule() {
   }
 
   return (
-    <div className="container my-5" style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" }}>
+    <div className="container my-5 schedule-container">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h1 className="title-gradient mb-0">
           <i className="bi bi-calendar-event me-2"></i> Thời khóa biểu của tôi
@@ -156,19 +156,19 @@ export default function MySchedule() {
         <div>
           {Object.entries(groupedSchedules).map(([date, daySchedules]) => (
             <div key={date} className="mb-4">
-              <div className="d-flex align-items-center mb-3 pb-2 border-bottom">
-                <i className="bi bi-calendar3 text-primary me-2" style={{ fontSize: '1.5rem' }}></i>
-                <h5 className="mb-0 text-primary fw-bold">{date}</h5>
+              <div className="schedule-date-header d-flex align-items-center">
+                <i className="bi bi-calendar3 me-2" style={{ fontSize: '1.5rem' }}></i>
+                <span>{date}</span>
               </div>
               <div className="row g-3">
                 {daySchedules.map((schedule) => {
                   const upcoming = isUpcoming(schedule.ngay_hoc)
                   return (
                     <div key={schedule.id} className="col-lg-6 col-md-12">
-                      <div className={`card h-100 shadow-sm ${upcoming ? 'border-primary border-2' : 'border-secondary'}`} style={{ transition: 'all 0.3s ease' }}>
-                        <div className={`card-header ${upcoming ? 'bg-primary text-white' : 'bg-secondary text-white'} py-2`}>
+                      <div className={`card h-100 schedule-card ${upcoming ? 'upcoming' : ''}`}>
+                        <div className={`card-header schedule-card-header ${upcoming ? 'bg-primary text-white' : 'bg-secondary text-white'}`}>
                           <div className="d-flex justify-content-between align-items-center">
-                            <h6 className="mb-0 fw-bold" style={{ fontSize: '0.95rem' }}>
+                            <h6 className="mb-0 fw-bold">
                               <i className="bi bi-book me-2"></i>
                               {schedule.tieu_de}
                             </h6>
@@ -189,14 +189,14 @@ export default function MySchedule() {
                           <div className="mb-3">
                             <div className="d-flex align-items-center mb-2">
                               <i className="bi bi-calendar-check text-primary me-2"></i>
-                              <span className="fw-semibold" style={{ fontSize: '0.9rem' }}>
+                              <span className="fw-semibold">
                                 {formatDate(schedule.ngay_hoc)}
                               </span>
                             </div>
                             {schedule.thoi_gian_bat_dau && schedule.thoi_gian_ket_thuc ? (
                               <div className="d-flex align-items-center">
                                 <i className="bi bi-clock text-success me-2"></i>
-                                <span className="badge bg-success-subtle text-success-emphasis px-3 py-2" style={{ fontSize: '0.9rem' }}>
+                                <span className="schedule-time-badge">
                                   <strong>{schedule.thoi_gian_bat_dau}</strong> - <strong>{schedule.thoi_gian_ket_thuc}</strong>
                                 </span>
                               </div>
@@ -209,7 +209,7 @@ export default function MySchedule() {
                           </div>
                           
                           {schedule.mo_ta && (
-                            <p className="text-muted mb-3 small" style={{ lineHeight: '1.6' }}>{schedule.mo_ta}</p>
+                            <p className="schedule-description mb-3">{schedule.mo_ta}</p>
                           )}
 
                           {schedule.khoa_hoc && (
@@ -223,7 +223,7 @@ export default function MySchedule() {
                           )}
 
                           {schedule.ghi_chu && (
-                            <div className="alert alert-info py-2 mb-3" style={{ fontSize: '0.85rem' }}>
+                            <div className="schedule-note mb-3">
                               <i className="bi bi-info-circle me-1"></i>
                               <strong>Ghi chú:</strong> {schedule.ghi_chu}
                             </div>
@@ -235,8 +235,7 @@ export default function MySchedule() {
                                 href={schedule.link_google_meet}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="btn btn-danger fw-semibold"
-                                style={{ borderRadius: '8px' }}
+                                className="btn btn-danger fw-semibold schedule-join-btn"
                               >
                                 <i className="bi bi-camera-video-fill me-2"></i>
                                 Vào lớp học ngay (Google Meet)
@@ -246,8 +245,7 @@ export default function MySchedule() {
                                   href={schedule.link_zoom}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="btn btn-info fw-semibold"
-                                  style={{ borderRadius: '8px' }}
+                                  className="btn btn-info fw-semibold schedule-join-btn"
                                 >
                                   <i className="bi bi-camera-video me-2"></i>
                                   Hoặc vào Zoom
