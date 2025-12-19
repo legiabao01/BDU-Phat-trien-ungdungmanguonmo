@@ -1455,7 +1455,13 @@ export default function LearnPage() {
                                     {lesson.tai_lieu_pdf ? (
                                       <div className="mb-3">
                                         <a 
-                                          href={lesson.tai_lieu_pdf.startsWith('http') ? lesson.tai_lieu_pdf : `http://localhost:8001${lesson.tai_lieu_pdf}`}
+                                          href={
+                                            lesson.tai_lieu_pdf.startsWith('http')
+                                              ? lesson.tai_lieu_pdf
+                                              : `${
+                                                  import.meta.env.VITE_API_BASE_URL || ''
+                                                }${lesson.tai_lieu_pdf}`
+                                          }
                                           target="_blank" 
                                           rel="noopener noreferrer"
                                           className="btn btn-outline-primary btn-sm"

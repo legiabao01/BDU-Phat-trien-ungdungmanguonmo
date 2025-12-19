@@ -276,7 +276,11 @@ export default function LessonResourcesEditor({ lesson, onUpdate }) {
             </div>
             {lesson.tai_lieu_pdf && (
               <a
-                href={lesson.tai_lieu_pdf}
+                href={
+                  lesson.tai_lieu_pdf.startsWith('http')
+                    ? lesson.tai_lieu_pdf
+                    : `${import.meta.env.VITE_API_BASE_URL || ''}${lesson.tai_lieu_pdf}`
+                }
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn btn-outline-primary"
